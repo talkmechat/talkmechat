@@ -1,0 +1,3642 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>💬 TalkMe</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
+<style>
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body {
+  font-family:'Nunito', sans-serif;
+  background:#f4f7f5;
+  color:#1b2b22;
+  overflow:hidden;
+  transition:background .2s, color .2s;
+}
+
+/* ══════════════════════════════════════════════
+   🔐 LOGIN / REGISTER SCREEN
+══════════════════════════════════════════════ */
+.auth-screen {
+  position:fixed; inset:0; z-index:100;
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; overflow:hidden;
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -10%, #c9a463cc 0%, transparent 60%),
+    linear-gradient(160deg, #3a7d5c 0%, #1b4332 35%, #14301f 65%, #c9a463 100%);
+}
+.auth-blob {
+  position:absolute; border-radius:50%; filter:blur(2px);
+  opacity:.35; pointer-events:none;
+}
+.auth-blob-1 {
+  width:220px; height:220px; top:-60px; left:-60px;
+  background:radial-gradient(circle,#c9a463,transparent 70%);
+  animation:rcFloat1 9s ease-in-out infinite;
+}
+.auth-blob-2 {
+  width:180px; height:180px; bottom:-50px; right:-40px;
+  background:radial-gradient(circle,#3ddc84,transparent 70%);
+  animation:rcFloat2 11s ease-in-out infinite;
+}
+.auth-blob-3 {
+  width:130px; height:130px; top:40%; right:10%;
+  background:radial-gradient(circle,#ffffff,transparent 70%);
+  opacity:.12;
+  animation:rcFloat1 7s ease-in-out infinite reverse;
+}
+@keyframes rcFloat1 {
+  0%,100% { transform:translate(0,0) scale(1); }
+  50%     { transform:translate(16px,-18px) scale(1.08); }
+}
+@keyframes rcFloat2 {
+  0%,100% { transform:translate(0,0) scale(1); }
+  50%     { transform:translate(-14px,14px) scale(1.05); }
+}
+.auth-wrap { position:relative; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; }
+.auth-logo {
+  width:64px; height:64px; border-radius:22px; flex-shrink:0;
+  background:linear-gradient(135deg,#fff,#eafaf0);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.9rem; margin-bottom:-30px; z-index:2;
+  box-shadow:0 10px 26px #14301f55;
+  animation:rcLogoIn .4s cubic-bezier(.34,1.3,.64,1) both, rcLogoFloat 3.4s ease-in-out .5s infinite;
+}
+@keyframes rcLogoIn { from{opacity:0; transform:translateY(10px) scale(.7) rotate(-8deg);} to{opacity:1; transform:translateY(0) scale(1) rotate(0);} }
+@keyframes rcLogoFloat { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+.auth-card {
+  width:100%;
+  background:#fff; border-radius:26px;
+  padding:44px 24px 24px;
+  box-shadow:0 25px 70px #14301f4d, 0 0 0 1px #ffffff40 inset;
+  animation:rcCardIn .35s cubic-bezier(.34,1.15,.64,1) both;
+}
+@keyframes rcCardIn { from{opacity:0; transform:translateY(18px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);} }
+.auth-title {
+  text-align:center; font-size:1.55rem; font-weight:900; color:#1b4332;
+  margin-bottom:2px; letter-spacing:.2px;
+}
+.auth-sub {
+  text-align:center; font-size:0.7rem; font-weight:800; color:#8a9d92;
+  margin-bottom:22px; letter-spacing:1.6px;
+}
+.auth-tabs {
+  position:relative; display:flex; gap:0; margin-bottom:20px;
+  background:#e8f3ec; border-radius:14px; padding:4px;
+}
+.auth-tab-slider {
+  position:absolute; top:4px; left:4px; bottom:4px;
+  width:calc(50% - 4px); border-radius:10px;
+  background:linear-gradient(135deg,#2d6a4f,#1b4332);
+  box-shadow:0 4px 14px #2d6a4f4d;
+  transition:transform .28s cubic-bezier(.34,1.2,.64,1);
+}
+.auth-tab {
+  position:relative; z-index:1; flex:1; padding:9px 0; text-align:center;
+  border-radius:10px; color:#7a9186; font-weight:800; font-size:0.82rem;
+  cursor:pointer; transition:color .2s; -webkit-tap-highlight-color:transparent;
+}
+.auth-tab.active { color:#fff; }
+.auth-field {
+  margin-bottom:12px; position:relative; display:flex; align-items:center;
+}
+.auth-input-ic {
+  position:absolute; left:14px; font-size:0.9rem; opacity:.55; pointer-events:none;
+}
+.auth-input {
+  width:100%; padding:12px 14px 12px 38px; border-radius:14px;
+  border:2px solid #e3ede6; background:#f4f8f5;
+  font-family:'Nunito',sans-serif; font-size:0.9rem; color:#1b2b22;
+  outline:none; transition:border-color .18s, background .18s, box-shadow .18s;
+}
+.auth-input:focus { border-color:#2d6a4f; background:#fff; box-shadow:0 0 0 4px #2d6a4f1a; }
+.auth-input:has(~ .auth-eye) { padding-right:38px; }
+.auth-eye {
+  position:absolute; right:6px; border:none; background:transparent;
+  font-size:0.9rem; cursor:pointer; padding:8px; opacity:.55; transition:opacity .15s, transform .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.auth-eye:active { transform:scale(.85); opacity:.9; }
+.auth-btn {
+  width:100%; padding:13px 0; margin-top:6px;
+  background:linear-gradient(135deg,#2d6a4f,#1b4332);
+  color:#fff; border:none; border-radius:16px;
+  font-family:'Nunito',sans-serif; font-size:0.92rem; font-weight:900;
+  cursor:pointer; letter-spacing:.4px;
+  box-shadow:0 6px 20px #2d6a4f4d;
+  -webkit-tap-highlight-color:transparent;
+  position:relative; overflow:hidden; transition:transform .12s, box-shadow .15s;
+}
+.auth-btn span { position:relative; z-index:1; }
+.auth-btn::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(120deg, transparent 30%, #ffffff33 50%, transparent 70%);
+  transform:translateX(-120%);
+}
+.auth-btn:active { transform:scale(.97); box-shadow:0 3px 10px #2d6a4f4d; }
+.auth-btn:active::before { transform:translateX(120%); transition:transform .5s ease; }
+.auth-btn:disabled { opacity:.6; cursor:not-allowed; }
+.auth-err {
+  text-align:center; font-size:0.75rem; font-weight:800; color:#e53935;
+  min-height:16px; margin-top:10px;
+  animation:rcShake .32s ease;
+}
+.auth-err:empty { animation:none; }
+@keyframes rcShake {
+  0%,100% { transform:translateX(0); }
+  25% { transform:translateX(-4px); }
+  75% { transform:translateX(4px); }
+}
+
+/* ══════════════════════════════════════════════
+   👋 WELCOME SCREEN (ditampilkan sekali di awal)
+══════════════════════════════════════════════ */
+.welcome-screen {
+  position:fixed; inset:0; z-index:200;
+  display:none; flex-direction:column;
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -10%, #c9a463cc 0%, transparent 60%),
+    linear-gradient(160deg, #3a7d5c 0%, #1b4332 35%, #14301f 65%, #c9a463 100%);
+  color:#fff; padding:26px 24px 24px; overflow:hidden;
+}
+.welcome-skip {
+  align-self:flex-end; background:transparent; border:none; color:#eafaf0cc;
+  font-family:'Nunito',sans-serif; font-size:0.8rem; font-weight:800;
+  cursor:pointer; padding:8px 4px; -webkit-tap-highlight-color:transparent;
+}
+.welcome-track {
+  flex:1; display:flex; touch-action:pan-y;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+.welcome-slide {
+  flex:0 0 100%; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; padding:0 8px;
+}
+.welcome-emoji {
+  font-size:4.2rem; margin-bottom:22px;
+  filter:drop-shadow(0 8px 18px #00000033);
+}
+.welcome-title { font-size:1.4rem; font-weight:900; margin-bottom:10px; }
+.welcome-desc {
+  font-size:0.88rem; font-weight:600; line-height:1.55; color:#eafaf0dd;
+  max-width:300px;
+}
+.welcome-dots { display:flex; justify-content:center; gap:7px; margin:22px 0 18px; }
+.welcome-dot { width:7px; height:7px; border-radius:50%; background:#ffffff44; transition:all .25s; }
+.welcome-dot.active { width:20px; border-radius:5px; background:#c9a463; }
+.welcome-btn {
+  width:100%; padding:14px 0; border:none; border-radius:16px;
+  background:#fff; color:#1b4332; font-family:'Nunito',sans-serif;
+  font-size:0.95rem; font-weight:900; cursor:pointer; letter-spacing:.3px;
+  box-shadow:0 8px 24px #00000033; -webkit-tap-highlight-color:transparent;
+  transition:transform .1s;
+}
+.welcome-btn:active { transform:scale(.97); }
+
+/* ══════════════════════════════════════════════
+   💬 TALKME APP
+══════════════════════════════════════════════ */
+.rc-app {
+  position:fixed; inset:0;
+  background:#f4f7f5;
+  display:none; flex-direction:column;
+  transition:background .2s;
+}
+.rc-app.rc-open { display:flex; animation:rcAppIn .3s cubic-bezier(.34,1.1,.64,1) both; }
+@keyframes rcAppIn {
+  from { opacity:0; transform:scale(.97); }
+  to   { opacity:1; transform:scale(1); }
+}
+
+.rc-topbar {
+  display:flex; align-items:center; gap:8px;
+  padding:14px 16px;
+  background:#fff;
+  border-bottom:1.5px solid #e8f3ec;
+  flex-shrink:0;
+  transition:background .2s, border-color .2s;
+}
+.rc-back-btn {
+  width:34px; height:34px; border-radius:50%;
+  background:#e8f3ec; border:none; cursor:pointer;
+  font-size:1.1rem; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; flex-shrink:0;
+  transition:transform .12s, background .15s;
+}
+.rc-back-btn:active { transform:scale(.88); background:#cfe3d4; }
+.rc-topbar-title { flex:1; font-size:1rem; font-weight:800; color:#1b2b22; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:font-size .15s; }
+.rc-topbar-sub   { font-size:0.65rem; color:#5b6f63; font-weight:600; }
+.rc-topbar.home .rc-back-btn, .rc-topbar.home .rc-avatar { display:none; }
+.rc-topbar.home .rc-topbar-title { font-size:1.55rem; font-weight:900; }
+.rc-topbar.home .rc-topbar-sub { display:none; }
+.rc-menu-wrap { position:relative; }
+.rc-menu-dropdown {
+  display:none; position:absolute; top:44px; right:0;
+  background:#fff; border-radius:14px; box-shadow:0 10px 28px rgba(0,0,0,.22);
+  min-width:150px; overflow:hidden; z-index:30;
+  opacity:0; transform:translateY(-8px) scale(.95); transform-origin:top right;
+  transition:opacity .16s, transform .16s;
+  pointer-events:none;
+}
+.rc-menu-dropdown.show { display:block; opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+.rc-menu-dropdown button {
+  width:100%; text-align:left; padding:12px 16px; border:none; background:transparent;
+  font-family:'Nunito',sans-serif; font-size:0.82rem; font-weight:800; color:#1b2b22;
+  cursor:pointer; display:flex; align-items:center; gap:8px;
+  -webkit-tap-highlight-color:transparent; transition:background .12s;
+}
+.rc-menu-dropdown button:active { background:#e8f3ec; }
+.rc-quick-action {
+  width:100%; text-align:left; padding:13px 14px; border:none; border-radius:12px; background:#f4f8f5;
+  font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:800; color:#1b2b22;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background .12s;
+}
+.rc-quick-action:active { background:#e8f3ec; transform:scale(.98); }
+body.dark .rc-quick-action { background:#16281f; color:#eaf3ec; }
+body.dark .rc-quick-action:active { background:#1e352a; }
+.rc-icon-btn {
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  border:none; background:#e8f3ec; color:#2d6a4f;
+  font-size:0.95rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .12s, background .15s;
+}
+.rc-icon-btn:active { transform:scale(.85) rotate(-6deg); background:#cfe3d4; }
+.rc-logout-btn {
+  border:none; background:#e8f3ec; color:#2d6a4f;
+  font-size:0.68rem; font-weight:900; padding:7px 12px; border-radius:50px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; flex-shrink:0;
+  transition:transform .12s;
+}
+.rc-logout-btn:active { transform:scale(.92); }
+
+.rc-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:linear-gradient(135deg,#2d6a4f,#b08d57);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:900; font-size:0.9rem; flex-shrink:0;
+}
+
+/* CONTACTS LIST */
+.rc-list { flex:1; overflow-y:auto; padding:8px 0 20px; }
+.rc-list::-webkit-scrollbar { width:3px; }
+.rc-list::-webkit-scrollbar-thumb { background:#cfe3d4; border-radius:3px; }
+
+.rc-search-wrap {
+  display:flex; align-items:center; gap:8px;
+  margin:10px 14px 6px;
+  background:#e8f3ec; border-radius:50px; padding:0 14px;
+  transition:background .15s, box-shadow .15s;
+}
+.rc-search-wrap:focus-within { background:#fff; box-shadow:0 0 0 2px #2d6a4f33; }
+.rc-search-wrap span { font-size:0.9rem; }
+.rc-search {
+  flex:1; border:none; background:transparent;
+  padding:11px 0; font-family:'Nunito',sans-serif;
+  font-size:0.88rem; color:#1b2b22; outline:none;
+}
+.rc-search::placeholder { color:#7a9186; }
+
+/* FILTER CHIPS (Semua / Belum Dibaca / Favorit) */
+.rc-filter-chips { display:flex; gap:8px; padding:2px 14px 10px; overflow-x:auto; scrollbar-width:none; }
+.rc-filter-chips::-webkit-scrollbar { display:none; }
+.rc-chip {
+  flex-shrink:0; padding:7px 15px; border-radius:50px; border:1.5px solid #cfe3d4;
+  background:#e8f3ec; color:#2d6a4f; font-family:'Nunito',sans-serif; font-size:0.76rem; font-weight:800;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; gap:5px;
+  white-space:nowrap; transition:background .15s, border-color .15s, transform .12s, color .15s;
+}
+.rc-chip:active { transform:scale(.94); }
+.rc-chip.active { background:#2d6a4f; border-color:#2d6a4f; color:#fff; }
+.rc-chip-badge {
+  background:#fff; color:#2d6a4f; border-radius:50px; font-size:0.62rem; font-weight:900;
+  padding:1px 6px;
+}
+.rc-chip.active .rc-chip-badge { background:#c9a463; color:#1b2b22; }
+.rc-pin-hint {
+  margin:0 14px 8px; padding:8px 12px; border-radius:12px;
+  background:#f3e9d2; color:#6b5323; font-size:0.68rem; font-weight:700;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.rc-pin-hint button { border:none; background:transparent; color:#6b5323; font-weight:900; cursor:pointer; font-size:0.8rem; }
+
+.rc-section-lbl {
+  font-size:0.63rem; font-weight:900; letter-spacing:1.5px;
+  color:#2d6a4f; padding:10px 16px 5px; text-transform:uppercase;
+  display:flex; align-items:center; gap:5px;
+}
+.rc-contact {
+  display:flex; align-items:center; gap:11px;
+  padding:11px 16px; cursor:pointer;
+  transition:background .12s, transform .15s;
+  -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
+  user-select:none;
+}
+.rc-contact:active { transform:scale(.98); }
+.rc-contact:active { background:#e8f3ec; }
+.rc-contact-info { flex:1; min-width:0; }
+.rc-contact-name { font-size:0.9rem; font-weight:800; color:#1b2b22; }
+.rc-contact-sub  { font-size:0.72rem; color:#5b6f63; font-weight:600; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rc-contact-right { display:flex; flex-direction:column; align-items:flex-end; gap:7px; flex-shrink:0; margin-left:4px; }
+.rc-contact-time { font-size:0.62rem; color:#7a9186; font-weight:700; white-space:nowrap; }
+.rc-pin-icon { font-size:0.8rem; opacity:.65; transform:rotate(45deg); display:inline-block; }
+.rc-contact.unread .rc-contact-name { color:#14301f; }
+.rc-contact.unread .rc-contact-sub  { color:#1b2b22; font-weight:800; }
+.rc-empty { text-align:center; padding:36px 20px; color:#7a9186; font-size:0.85rem; font-weight:700; }
+
+/* BOTTOM NAV (ala WhatsApp) */
+.rc-bottom-nav {
+  display:flex; border-top:1.5px solid #e8f3ec; background:#fff; flex-shrink:0;
+  padding:6px 0 8px;
+}
+.rc-nav-tab {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  border:none; background:transparent; color:#7a9186; font-family:'Nunito',sans-serif;
+  font-size:0.63rem; font-weight:800; cursor:pointer; padding:5px 0;
+  -webkit-tap-highlight-color:transparent; transition:color .15s;
+}
+.rc-nav-tab.active { color:#2d6a4f; }
+.rc-nav-tab .rc-nav-icon { transition:transform .18s cubic-bezier(.34,1.5,.64,1); display:inline-block; }
+.rc-nav-tab.active .rc-nav-icon { transform:scale(1.18) translateY(-1px); }
+.rc-nav-tab:active .rc-nav-icon { transform:scale(.85); }
+.rc-nav-icon { font-size:1.2rem; }
+
+/* CHAT SEARCH BAR */
+.rc-chat-search-bar {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 14px; background:#e8f3ec;
+  border-bottom:1.5px solid #cfe3d4; flex-shrink:0;
+  animation:rcSlideDown .18s ease both;
+}
+.rc-chat-search-bar input {
+  flex:1; border:none; background:transparent; outline:none;
+  font-family:'Nunito',sans-serif; font-size:0.85rem; color:#1b2b22;
+}
+.rc-chat-search-bar input::placeholder { color:#7a9186; }
+.rc-chat-search-bar button {
+  border:none; background:transparent; color:#5b6f63; font-size:0.95rem; cursor:pointer;
+}
+
+/* CHAT VIEW */
+.rc-messages {
+  flex:1; overflow-y:auto; padding:14px 12px;
+  display:flex; flex-direction:column; gap:5px;
+  background:#f7faf8;
+  transition:background .2s;
+}
+.rc-messages::-webkit-scrollbar { width:3px; }
+.rc-messages::-webkit-scrollbar-thumb { background:#cfe3d4; border-radius:3px; }
+
+/* ══════════════════════════════════════════════
+   📞 CALL OVERLAY
+══════════════════════════════════════════════ */
+.rc-call-ov {
+  position:fixed; inset:0; z-index:300; display:none;
+  flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -10%, #c9a463cc 0%, transparent 60%),
+    linear-gradient(160deg, #3a7d5c 0%, #1b4332 35%, #14301f 65%, #c9a463 100%);
+  color:#fff; padding:24px;
+  animation:rcAppIn .25s cubic-bezier(.34,1.1,.64,1) both;
+}
+.rc-call-ov.show { display:flex; }
+.rc-call-avatar {
+  width:104px; height:104px; border-radius:50%;
+  background:linear-gradient(135deg,#fff,#eafaf0); color:#1b4332;
+  display:flex; align-items:center; justify-content:center;
+  font-size:2.6rem; font-weight:900; margin-bottom:8px;
+  box-shadow:0 14px 34px #14301f66;
+  animation:rcLogoFloat 3.4s ease-in-out infinite;
+}
+.rc-call-name { font-size:1.35rem; font-weight:900; }
+.rc-call-status { font-size:0.85rem; font-weight:700; opacity:.85; margin-bottom:26px; }
+.rc-call-controls { display:flex; align-items:center; gap:22px; }
+.rc-call-btn {
+  width:60px; height:60px; border-radius:50%; border:none; font-size:1.5rem;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; transition:transform .12s;
+}
+.rc-call-btn:active { transform:scale(.9); }
+.rc-call-btn.accept { background:#3ddc84; color:#0f2a1a; }
+.rc-call-btn.decline { background:#e53935; color:#fff; }
+.rc-call-btn.secondary { width:48px; height:48px; font-size:1.2rem; background:#ffffff26; color:#fff; }
+
+.rc-day-sep { display:flex; justify-content:center; margin:14px 0 10px; }
+.rc-day-sep span {
+  background:#e8f3ec; color:#5c7a68; font-size:0.7rem; font-weight:800;
+  padding:5px 14px; border-radius:20px; letter-spacing:.3px;
+}
+body.dark .rc-day-sep span { background:#16281f; color:#a9c4b3; }
+.rc-bwrap { display:flex; align-items:flex-start; gap:5px; animation:rcMsgIn .28s cubic-bezier(.34,1.3,.64,1) both; }
+.rc-bwrap.sent     { flex-direction:row-reverse; }
+.rc-bwrap.received { flex-direction:row; }
+@keyframes rcMsgIn {
+  from { opacity:0; transform:translateY(10px) scale(.94); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.rc-bubble { transition:transform .12s; }
+.rc-bwrap:active .rc-bubble { transform:scale(.98); }
+
+.rc-msg-outer { display:flex; flex-direction:column; max-width:78%; }
+.rc-bwrap.sent     .rc-msg-outer { align-items:flex-end; }
+.rc-bwrap.received .rc-msg-outer { align-items:flex-start; }
+
+.rc-bubble {
+  max-width:100%; padding:9px 13px; border-radius:16px;
+  font-size:0.85rem; line-height:1.45; word-break:break-word;
+}
+.rc-bubble.sent {
+  background:#2d6a4f; color:#fff; border-bottom-right-radius:3px;
+}
+.rc-bubble.received {
+  background:#fff; color:#1b2b22; border-bottom-left-radius:3px;
+  box-shadow:0 2px 10px rgba(0,0,0,.07);
+}
+.rc-btime { font-size:0.6rem; margin-top:3px; opacity:.65; }
+.rc-bubble.sent .rc-btime { text-align:right; }
+
+.rc-bubble-img { padding:5px !important; }
+.rc-msg-img {
+  max-width:220px; max-height:280px; width:100%;
+  border-radius:12px; display:block; cursor:pointer;
+  object-fit:cover;
+}
+
+.rc-reply-quote {
+  font-size:0.68rem; font-weight:700; padding:5px 9px;
+  margin-bottom:5px; border-radius:9px; border-left:3px solid #b08d57;
+  background:rgba(255,255,255,.16); opacity:.95;
+}
+.rc-bubble.received .rc-reply-quote { background:#e8f3ec; color:#1b4332; border-left-color:#2d6a4f; }
+
+.rc-no-msg { text-align:center; padding:32px 16px; color:#7a9186; font-size:0.82rem; font-weight:700; }
+
+.rc-msg-actions { display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+.rc-bwrap.sent .rc-msg-actions { justify-content:flex-end; }
+.rc-msg-btn {
+  padding:3px 10px; border-radius:50px;
+  font-size:0.62rem; font-weight:900;
+  border:1.5px solid #cfe3d4; color:#2d6a4f;
+  background:#f7faf8; cursor:pointer;
+  font-family:'Nunito',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  transition:all 0.15s;
+}
+.rc-msg-btn:active { transform:scale(0.91); background:#e8f3ec; }
+
+.rc-edit-wrap {
+  max-width:100%; padding:8px 11px 7px;
+  border-radius:16px; border:2px solid #2d6a4f;
+  background:#fff; border-bottom-right-radius:3px;
+  min-width:180px;
+}
+.rc-edit-area {
+  width:100%; border:none; outline:none; resize:none;
+  font-family:'Nunito',sans-serif; font-size:0.85rem; color:#1b2b22;
+  line-height:1.45; background:transparent; overflow-y:auto;
+}
+.rc-edit-footer { display:flex; justify-content:flex-end; gap:5px; margin-top:6px; }
+.rc-edit-save {
+  padding:4px 13px; border-radius:50px;
+  background:#2d6a4f; border:none; color:#fff;
+  font-family:'Nunito',sans-serif; font-size:0.7rem; font-weight:900;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.rc-edit-cancel {
+  padding:4px 11px; border-radius:50px;
+  background:transparent; border:1.5px solid #cfe3d4; color:#7a9186;
+  font-family:'Nunito',sans-serif; font-size:0.7rem; font-weight:900;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+
+/* REPLY BAR (above input) */
+.rc-reply-bar {
+  display:none; align-items:center; gap:8px;
+  padding:8px 14px; background:#e8f3ec;
+  border-top:1.5px solid #cfe3d4; flex-shrink:0;
+  font-size:0.75rem; color:#1b4332;
+  animation:rcSlideDown .18s ease both;
+}
+.rc-reply-bar-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rc-reply-cancel { border:none; background:transparent; color:#7a9186; font-size:1rem; cursor:pointer; flex-shrink:0; }
+
+/* INPUT */
+.rc-inputbar {
+  display:flex; align-items:flex-end; gap:7px;
+  padding:10px 12px; background:#fff;
+  border-top:1.5px solid #e8f3ec; flex-shrink:0;
+}
+.rc-input {
+  flex:1; padding:10px 14px; max-height:90px;
+  border:2px solid #cfe3d4; border-radius:18px;
+  font-family:'Nunito',sans-serif; font-size:0.88rem; color:#1b2b22;
+  background:#e8f3ec; outline:none; resize:none;
+  transition:border-color .2s, background .2s;
+  line-height:1.4; overflow-y:auto;
+}
+.rc-input:focus { border-color:#2d6a4f; background:#fff; }
+.rc-input::placeholder { color:#7a9186; }
+.rc-send {
+  width:40px; height:40px; border-radius:50%; flex-shrink:0;
+  background:#2d6a4f; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem; color:#fff;
+  transition:background .2s, transform .1s;
+  -webkit-tap-highlight-color:transparent;
+}
+.rc-send:active { transform:scale(.91); }
+.rc-send:disabled { background:#cfe3d4; cursor:not-allowed; }
+
+/* COUNTDOWN BADGE */
+.rc-countdown {
+  font-size:0.58rem; font-weight:800;
+  color:#2d6a4f; background:#f3e9d2;
+  border:1px solid #cfe3d4;
+  border-radius:50px; padding:1px 7px;
+  display:inline-flex; align-items:center; gap:3px;
+  white-space:nowrap;
+}
+
+/* EMOJI PICKER */
+.rc-emoji-toggle {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:#e8f3ec; border:1.5px solid #cfe3d4;
+  cursor:pointer; font-size:1.05rem;
+  display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; transition:all 0.15s;
+}
+.rc-emoji-toggle:active { transform:scale(0.9); }
+.rc-emoji-toggle.active { background:#cfe3d4; border-color:#2d6a4f; }
+
+.rc-emoji-bar {
+  display:none; flex-wrap:wrap; gap:4px;
+  padding:8px 12px; border-top:1.5px solid #e8f3ec;
+  background:#fff; flex-shrink:0;
+  max-height:110px; overflow-y:auto;
+}
+.rc-emoji-bar.show { display:flex; animation:rcSlideDown .18s ease both; }
+.rc-emoji-btn {
+  width:34px; height:34px; border-radius:10px;
+  border:none; background:transparent; font-size:1.2rem;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; transition:background 0.1s;
+}
+.rc-emoji-btn:active { background:#e8f3ec; }
+
+/* CENTANG BACA (ala WhatsApp) */
+.rc-ticks { font-size:0.72rem; letter-spacing:-2px; margin-left:2px; }
+.rc-ticks.delivered { color:#9fb8ac; }
+.rc-bubble.sent .rc-ticks.delivered { color:#cfe3d4; }
+.rc-ticks.read { color:#4fc3f7; }
+
+/* STATUS ONLINE / TERAKHIR DILIHAT */
+.rc-online-dot {
+  width:8px; height:8px; border-radius:50%; background:#3ddc84;
+  display:inline-block; margin-right:4px; box-shadow:0 0 0 2px #ffffffaa;
+}
+.rc-topbar-sub.rc-online { color:#2d6a4f; font-weight:800; }
+
+/* REAKSI PESAN */
+.rc-react-btn { position:relative; }
+.rc-react-picker {
+  display:none; gap:3px; position:absolute; bottom:100%; margin-bottom:4px;
+  background:#fff; border-radius:50px; padding:5px 7px; box-shadow:0 6px 20px rgba(0,0,0,.18);
+  z-index:5;
+}
+.rc-react-picker.show { display:flex; animation:rcPopIn .18s cubic-bezier(.34,1.5,.64,1) both; }
+.rc-react-picker button {
+  border:none; background:transparent; font-size:1.1rem; cursor:pointer; padding:2px 3px;
+  -webkit-tap-highlight-color:transparent; transition:transform .1s;
+}
+.rc-react-picker button:active { transform:scale(1.3); }
+.rc-msg-outer { position:relative; }
+.rc-reaction-badge {
+  position:absolute; bottom:-10px; font-size:0.78rem;
+  background:#fff; border-radius:50px; padding:1px 6px;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  animation:rcPopIn .25s cubic-bezier(.34,1.5,.64,1) both;
+}
+@keyframes rcPopIn { from{opacity:0; transform:scale(.4);} to{opacity:1; transform:scale(1);} }
+.rc-bwrap.sent .rc-reaction-badge { right:6px; }
+.rc-bwrap.received .rc-reaction-badge { left:6px; }
+
+/* PREVIEW & BADGE DI DAFTAR CHAT */
+.rc-unread-dot {
+  width:10px; height:10px; border-radius:50%; background:#2d6a4f;
+  flex-shrink:0;
+}
+
+/* LIGHTBOX */
+.rc-lightbox {
+  position:fixed; inset:0; z-index:99999;
+  background:rgba(10,20,15,.94);
+  display:none; align-items:center; justify-content:center;
+  padding:24px;
+}
+.rc-lightbox.show { display:flex; animation:rcFadeIn .2s ease both; }
+.rc-lightbox img { max-width:100%; max-height:100%; border-radius:14px; animation:rcZoomIn .22s cubic-bezier(.34,1.2,.64,1) both; }
+.rc-lightbox-close {
+  position:absolute; top:18px; right:18px;
+  width:38px; height:38px; border-radius:50%;
+  background:rgba(255,255,255,.15); border:none; color:#fff;
+  font-size:1.1rem; cursor:pointer; transition:transform .12s;
+}
+.rc-lightbox-close:active { transform:scale(.85); }
+@keyframes rcFadeIn { from{opacity:0;} to{opacity:1;} }
+@keyframes rcZoomIn { from{opacity:0; transform:scale(.85);} to{opacity:1; transform:scale(1);} }
+
+/* TOAST */
+.rc-toast {
+  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
+  background:#1b2b22; color:#fff; font-size:0.8rem; font-weight:700;
+  padding:11px 18px; border-radius:50px; z-index:9999;
+  opacity:0; pointer-events:none; transition:opacity .3s, transform .3s cubic-bezier(.34,1.4,.64,1);
+  max-width:88%; text-align:center; box-shadow:0 8px 24px #00000033;
+}
+.rc-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════════
+   🌙 DARK MODE
+══════════════════════════════════════════════ */
+body.dark { background:#0f1b15; color:#eaf3ec; }
+body.dark .rc-app { background:#0f1b15; }
+body.dark .rc-topbar { background:#16281f; border-color:#234030; }
+body.dark .rc-topbar-title { color:#eaf3ec; }
+body.dark .rc-topbar-sub { color:#8fada0; }
+body.dark .rc-back-btn, body.dark .rc-icon-btn, body.dark .rc-logout-btn { background:#1e352a; color:#d9c28a; }
+body.dark .rc-messages { background:#0f1b15; }
+body.dark .rc-bubble.received { background:#1e352a; color:#eaf3ec; box-shadow:none; }
+body.dark .rc-bubble.received .rc-reply-quote { background:#16281f; color:#d9c28a; }
+body.dark .rc-inputbar { background:#16281f; border-color:#234030; }
+body.dark .rc-input { background:#0f1b15; border-color:#234030; color:#eaf3ec; }
+body.dark .rc-input::placeholder { color:#5f7c6d; }
+body.dark .rc-search-wrap, body.dark .rc-chat-search-bar { background:#1e352a; border-color:#234030; }
+body.dark .rc-search, body.dark .rc-chat-search-bar input { color:#eaf3ec; }
+body.dark .rc-contact:active { background:#1e352a; }
+body.dark .rc-contact-name { color:#eaf3ec; }
+body.dark .rc-emoji-bar { background:#16281f; border-color:#234030; }
+body.dark .rc-emoji-toggle { background:#1e352a; border-color:#234030; }
+body.dark .rc-no-msg, body.dark .rc-empty { color:#5f7c6d; }
+body.dark .rc-countdown { background:#234030; border-color:#2d6a4f; color:#d9c28a; }
+body.dark .rc-msg-btn { background:#16281f; border-color:#234030; color:#d9c28a; }
+body.dark .rc-reply-bar { background:#1e352a; border-color:#234030; color:#d9c28a; }
+body.dark .rc-edit-wrap { background:#16281f; border-color:#2d6a4f; }
+body.dark .rc-edit-area { color:#eaf3ec; }
+body.dark .rc-react-picker { background:#16281f; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+body.dark .rc-reaction-badge { background:#16281f; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+body.dark .rc-contact-time { color:#5f7c6d; }
+body.dark .rc-contact.unread .rc-contact-name { color:#eaf3ec; }
+body.dark .rc-contact.unread .rc-contact-sub  { color:#cfe3d4; }
+body.dark .rc-topbar-sub.rc-online { color:#3ddc84; }
+body.dark .rc-menu-dropdown { background:#16281f; box-shadow:0 10px 28px rgba(0,0,0,.5); }
+body.dark .rc-menu-dropdown button { color:#eaf3ec; }
+body.dark .rc-menu-dropdown button:active { background:#1e352a; }
+body.dark .rc-chip { background:#1e352a; border-color:#234030; color:#d9c28a; }
+body.dark .rc-chip.active { background:#2d6a4f; border-color:#3ddc84; color:#fff; }
+body.dark .rc-pin-hint { background:#2a2413; color:#d9c28a; }
+body.dark .rc-pin-hint button { color:#d9c28a; }
+body.dark .rc-bottom-nav { background:#16281f; border-color:#234030; }
+body.dark .rc-nav-tab { color:#5f7c6d; }
+body.dark .rc-nav-tab.active { color:#3ddc84; }
+
+/* ══════════════════════════════════════════════
+   ⚙️ SETTINGS VIEW
+══════════════════════════════════════════════ */
+.rc-settings-view, .rc-status-view { display:none; flex-direction:column; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+#rcContactsView, #rcChatView, .rc-settings-view, .rc-status-view, .rc-panel-view.show { animation:rcViewIn .22s ease both; }
+@keyframes rcViewIn { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+.rc-set-profile { display:flex; align-items:center; gap:14px; padding:22px 18px; background:#e8f3ec; }
+.rc-set-avatar {
+  width:64px; height:64px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#2d6a4f,#b08d57);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:900; font-size:1.5rem;
+}
+.rc-set-uname { font-size:1.05rem; font-weight:900; color:#1b2b22; }
+.rc-set-bio {
+  width:100%; margin-top:6px; border:1.5px solid #cfe3d4; border-radius:10px;
+  background:#fff; padding:8px 10px; font-family:'Nunito',sans-serif; font-size:0.78rem;
+  color:#1b2b22; resize:none; outline:none;
+}
+.rc-set-bio:focus { border-color:#2d6a4f; }
+.rc-set-section-lbl {
+  font-size:0.63rem; font-weight:900; letter-spacing:1.5px; color:#2d6a4f;
+  padding:16px 18px 6px; text-transform:uppercase;
+}
+.rc-set-item {
+  display:flex; align-items:center; gap:12px; padding:13px 18px;
+  border-bottom:1px solid #eef4f0; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.rc-set-item:active { background:#f4f7f5; transform:scale(.995); }
+.rc-set-ic { font-size:1.15rem; width:22px; text-align:center; flex-shrink:0; }
+.rc-set-txt { flex:1; min-width:0; }
+.rc-set-title2 { font-size:0.85rem; font-weight:800; color:#1b2b22; }
+.rc-set-sub2 { font-size:0.68rem; color:#7a9186; font-weight:600; margin-top:1px; }
+.rc-switch { width:42px; height:24px; border-radius:50px; background:#cfe3d4; position:relative; flex-shrink:0; cursor:pointer; transition:background .2s; }
+.rc-switch.on { background:#2d6a4f; }
+.rc-switch::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .25s cubic-bezier(.34,1.5,.64,1); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.rc-switch.on::after { left:20px; }
+.rc-wall-row { display:flex; gap:10px; padding:6px 18px 16px; flex-wrap:wrap; }
+.rc-wall-swatch { width:44px; height:44px; border-radius:10px; cursor:pointer; border:2px solid transparent; flex-shrink:0; -webkit-tap-highlight-color:transparent; }
+.rc-wall-swatch.active { border-color:#2d6a4f; }
+.rc-set-danger { color:#e53935; }
+.rc-set-version { text-align:center; padding:22px 0 30px; font-size:0.68rem; color:#7a9186; font-weight:700; }
+
+body.dark .rc-set-profile { background:#1e352a; }
+body.dark .rc-set-uname { color:#eaf3ec; }
+body.dark .rc-set-bio { background:#16281f; border-color:#234030; color:#eaf3ec; }
+body.dark .rc-set-item { border-color:#1e352a; }
+body.dark .rc-set-item:active { background:#16281f; }
+body.dark .rc-set-title2 { color:#eaf3ec; }
+body.dark .rc-set-sub2 { color:#5f7c6d; }
+body.dark .rc-switch { background:#234030; }
+body.dark .rc-switch.on { background:#3ddc84; }
+body.dark .rc-set-version { color:#5f7c6d; }
+
+/* ══════════════════════════════════════════════
+   🔄 STATUS / PEMBARUAN VIEW
+══════════════════════════════════════════════ */
+.rc-status-mine { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.rc-status-mine:active { background:#e8f3ec; }
+.rc-status-ring {
+  width:52px; height:52px; border-radius:50%; flex-shrink:0; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  padding:2.5px; background:linear-gradient(135deg,#2d6a4f,#c9a463);
+}
+.rc-status-ring.seen { background:#cfe3d4; }
+.rc-status-ring.empty { background:#cfe3d4; }
+.rc-status-ring-inner {
+  width:100%; height:100%; border-radius:50%; background:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size:1.1rem; color:#2d6a4f; overflow:hidden;
+}
+.rc-status-plus {
+  position:absolute; bottom:-2px; right:-2px; width:19px; height:19px; border-radius:50%;
+  background:#2d6a4f; color:#fff; font-size:0.75rem; font-weight:900;
+  display:flex; align-items:center; justify-content:center; border:2px solid #fff;
+}
+.rc-status-item { display:flex; align-items:center; gap:12px; padding:11px 16px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.rc-status-item:active { background:#e8f3ec; }
+.rc-status-name { font-size:0.88rem; font-weight:800; color:#1b2b22; }
+.rc-status-time { font-size:0.7rem; color:#7a9186; font-weight:700; margin-top:2px; }
+.rc-status-composer { display:none; flex-direction:column; padding:16px 18px; gap:12px; border-top:8px solid #f4f7f5; }
+.rc-status-composer.show { display:flex; }
+.rc-status-taparea {
+  border-radius:16px; min-height:150px; padding:16px; display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:800; font-size:1.05rem; text-align:center; word-break:break-word;
+}
+.rc-status-taparea textarea {
+  width:100%; background:transparent; border:none; outline:none; resize:none; color:#fff;
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:1.05rem; text-align:center;
+}
+.rc-status-taparea textarea::placeholder { color:#ffffffcc; }
+.rc-bgswatch-row { display:flex; gap:8px; flex-wrap:wrap; }
+.rc-bgswatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; -webkit-tap-highlight-color:transparent; }
+.rc-bgswatch.active { border-color:#1b2b22; }
+body.dark .rc-bgswatch.active { border-color:#eaf3ec; }
+.rc-status-share-btn {
+  background:linear-gradient(135deg,#2d6a4f,#1b4332); color:#fff; border:none; border-radius:14px;
+  padding:11px 0; font-family:'Nunito',sans-serif; font-weight:900; font-size:0.85rem; cursor:pointer;
+}
+.rc-status-note { font-size:0.7rem; color:#7a9186; font-weight:700; padding:6px 18px 4px; }
+
+body.dark .rc-status-mine:active, body.dark .rc-status-item:active { background:#1e352a; }
+body.dark .rc-status-ring-inner { background:#16281f; color:#d9c28a; }
+body.dark .rc-status-name { color:#eaf3ec; }
+body.dark .rc-status-composer { border-color:#0f1b15; }
+body.dark .rc-status-note { color:#5f7c6d; }
+
+/* ══════════════════════════════════════════════
+   👁️ STORY VIEWER (fullscreen)
+══════════════════════════════════════════════ */
+.rc-story-viewer {
+  position:fixed; inset:0; z-index:400; display:none; flex-direction:column;
+  background:#14301f;
+}
+.rc-story-viewer.show { display:flex; animation:rcZoomIn .22s ease both; }
+.rc-story-bars { display:flex; gap:4px; padding:10px 10px 0; }
+.rc-story-bar { flex:1; height:3px; border-radius:3px; background:#ffffff40; overflow:hidden; }
+.rc-story-bar-fill { height:100%; width:0%; background:#fff; }
+.rc-story-head { display:flex; align-items:center; gap:10px; padding:10px 14px; color:#fff; }
+.rc-story-head-name { font-weight:900; font-size:0.9rem; flex:1; }
+.rc-story-head-time { font-size:0.7rem; opacity:.75; }
+.rc-story-close { background:transparent; border:none; color:#fff; font-size:1.2rem; cursor:pointer; padding:4px 8px; }
+.rc-story-body {
+  flex:1; display:flex; align-items:center; justify-content:center; position:relative;
+  padding:30px; color:#fff; font-weight:800; font-size:1.3rem; text-align:center; word-break:break-word;
+}
+.rc-story-tap-zones { position:absolute; inset:0; display:flex; }
+.rc-story-tap-zones div { flex:1; }
+.rc-story-del { position:absolute; bottom:20px; right:20px; background:#00000055; border:none; color:#fff; border-radius:50px; padding:9px 16px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.75rem; cursor:pointer; }
+
+/* ══════════════════════════════════════════════
+   ✨ FITUR TAMBAHAN ALA WHATSAPP
+══════════════════════════════════════════════ */
+/* panel generik full-screen (info kontak / berbintang / arsip) */
+.rc-panel-view { display:none; flex-direction:column; flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:#f4f7f5; }
+.rc-panel-view.show { display:flex; }
+body.dark .rc-panel-view { background:#0f1b15; }
+
+.rc-info-profile { display:flex; flex-direction:column; align-items:center; padding:30px 18px 20px; background:#e8f3ec; text-align:center; }
+body.dark .rc-info-profile { background:#1e352a; }
+.rc-info-avatar { width:84px; height:84px; border-radius:50%; background:linear-gradient(135deg,#2d6a4f,#b08d57); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:2rem; margin-bottom:12px; }
+.rc-info-name { font-size:1.1rem; font-weight:900; color:#1b2b22; }
+body.dark .rc-info-name { color:#eaf3ec; }
+.rc-info-bio { font-size:0.78rem; color:#5b6f63; font-weight:600; margin-top:4px; max-width:260px; }
+body.dark .rc-info-bio { color:#9fb3a6; }
+.rc-nick-edit { margin-top:12px; width:100%; max-width:240px; display:flex; gap:6px; }
+.rc-nick-edit input { flex:1; border:1.5px solid #cfe3d4; border-radius:10px; padding:7px 10px; font-family:'Nunito',sans-serif; font-size:0.78rem; outline:none; background:#fff; }
+body.dark .rc-nick-edit input { background:#16281f; border-color:#234030; color:#eaf3ec; }
+.rc-nick-edit button { border:none; border-radius:10px; background:#2d6a4f; color:#fff; font-weight:800; font-size:0.75rem; padding:0 12px; cursor:pointer; }
+
+.rc-info-media-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:10px 14px; }
+.rc-info-media-grid img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; cursor:pointer; }
+
+/* ══ 👥 KOMUNITAS / GRUP / SALURAN / KONTAK ══ */
+.rc-status-dot-ring { position:relative; }
+.rc-status-dot-ring.has-status::after {
+  content:''; position:absolute; bottom:-1px; right:-1px; width:12px; height:12px;
+  border-radius:50%; background:#25d366; border:2px solid #fff;
+}
+body.dark .rc-status-dot-ring.has-status::after { border-color:#0f1b15; }
+.rc-fab-row { position:absolute; right:16px; bottom:78px; display:flex; flex-direction:column; gap:10px; z-index:5; }
+.rc-fab {
+  width:52px; height:52px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#2d6a4f,#1b4332); color:#fff; font-size:1.3rem;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px #1b433255;
+  -webkit-tap-highlight-color:transparent; transition:transform .12s;
+}
+.rc-fab:active { transform:scale(.9); }
+.rc-fab.secondary { background:linear-gradient(135deg,#c9a463,#8a6d3b); width:44px; height:44px; font-size:1.05rem; align-self:flex-end; }
+.rc-group-card {
+  display:flex; align-items:center; gap:12px; padding:11px 16px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; transition:background .12s;
+}
+.rc-group-card:active { background:#eef5f0; }
+body.dark .rc-group-card:active { background:#16281f; }
+.rc-group-avatar {
+  width:46px; height:46px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#c9a463,#2d6a4f); color:#fff; font-weight:900;
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+}
+.rc-group-info { flex:1; min-width:0; }
+.rc-group-name { font-weight:800; font-size:0.92rem; }
+.rc-group-sub { font-size:0.75rem; color:#7a9186; font-weight:700; margin-top:2px; }
+
+/* modal overlay untuk buat grup / tambah kontak */
+.rc-modal-ov { position:fixed; inset:0; z-index:300; background:#00000066; display:none; align-items:flex-end; justify-content:center; }
+.rc-modal-ov.show { display:flex; animation:rcFadeIn .18s ease both; }
+.rc-modal-sheet {
+  width:100%; max-width:420px; max-height:82vh; background:#fff; border-radius:22px 22px 0 0;
+  display:flex; flex-direction:column; overflow:hidden; animation:rcCardIn .25s cubic-bezier(.34,1.1,.64,1) both;
+}
+body.dark .rc-modal-sheet { background:#132018; }
+.rc-modal-head { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid #e3ede6; flex-shrink:0; }
+body.dark .rc-modal-head { border-color:#1e352a; }
+.rc-modal-head b { font-size:0.98rem; flex:1; }
+.rc-modal-close { background:transparent; border:none; font-size:1rem; cursor:pointer; padding:6px; opacity:.6; }
+.rc-modal-body { flex:1; overflow-y:auto; padding:12px 16px; }
+.rc-modal-input {
+  width:100%; padding:11px 14px; border-radius:12px; border:2px solid #e3ede6; background:#f4f8f5;
+  font-family:'Nunito',sans-serif; font-size:0.88rem; margin-bottom:12px; outline:none;
+}
+.rc-modal-input:focus { border-color:#2d6a4f; }
+body.dark .rc-modal-input { background:#0f1b15; border-color:#1e352a; color:#eaf3ec; }
+.rc-member-row { display:flex; align-items:center; gap:10px; padding:9px 4px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.rc-member-row input { width:18px; height:18px; accent-color:#2d6a4f; }
+.rc-modal-foot { padding:12px 16px; border-top:1px solid #e3ede6; flex-shrink:0; }
+body.dark .rc-modal-foot { border-color:#1e352a; }
+.rc-contact-add-btn {
+  padding:6px 12px; border-radius:10px; border:none; font-weight:800; font-size:0.72rem;
+  cursor:pointer; background:#e8f3ec; color:#2d6a4f; -webkit-tap-highlight-color:transparent;
+}
+.rc-contact-add-btn.added { background:#fde8e8; color:#b23b3b; }
+
+.rc-star-item, .rc-archive-item { display:flex; align-items:center; gap:11px; padding:11px 16px; border-bottom:1px solid #eef4f0; cursor:pointer; }
+body.dark .rc-star-item, body.dark .rc-archive-item { border-color:#1e352a; }
+.rc-star-meta { font-size:0.68rem; color:#7a9186; font-weight:700; margin-top:2px; }
+.rc-star-text { font-size:0.85rem; font-weight:700; color:#1b2b22; }
+body.dark .rc-star-text { color:#eaf3ec; }
+
+/* mode pilih pesan (multi-select) */
+.rc-bwrap.selectmode { cursor:pointer; }
+.rc-bwrap.selected .rc-bubble { outline:2.5px solid #2d6a4f; outline-offset:2px; }
+.rc-selectbar {
+  display:none; align-items:center; gap:10px; padding:10px 14px;
+  background:#2d6a4f; color:#fff; flex-shrink:0;
+}
+.rc-selectbar.show { display:flex; animation:rcSlideDown .2s ease both; }
+@keyframes rcSlideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+.rc-selectbar b { flex:1; font-size:0.85rem; }
+.rc-selectbar button { border:none; background:#ffffff22; color:#fff; border-radius:10px; padding:7px 12px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.75rem; cursor:pointer; }
+
+.rc-star-badge { font-size:0.65rem; }
+body.rc-font-small .rc-bubble { font-size:0.74rem; }
+body.rc-font-large .rc-bubble { font-size:0.98rem; }
+
+</style>
+</head>
+<body>
+
+<!-- ══ WELCOME SCREEN (tampil sekali di kunjungan pertama) ══ -->
+<div class="welcome-screen" id="welcomeScreen">
+  <button class="welcome-skip" onclick="rcFinishWelcome()">Lewati</button>
+  <div class="welcome-track" id="welcomeTrack">
+    <div class="welcome-slide">
+      <div class="welcome-emoji">💬</div>
+      <div class="welcome-title">Selamat Datang di TalkMe</div>
+      <div class="welcome-desc">Ngobrol elegan &amp; simpel bareng teman-temanmu, kapan saja dan di mana saja.</div>
+    </div>
+    <div class="welcome-slide">
+      <div class="welcome-emoji">✅</div>
+      <div class="welcome-title">Centang Baca &amp; Status Online</div>
+      <div class="welcome-desc">Tahu kapan pesanmu terkirim, diterima, dan sudah dibaca — lengkap dengan status aktif temanmu.</div>
+    </div>
+    <div class="welcome-slide">
+      <div class="welcome-emoji">😍</div>
+      <div class="welcome-title">Reaksi &amp; Balas Pesan</div>
+      <div class="welcome-desc">Beri reaksi emoji ke pesan, balas pesan tertentu, kirim foto, dan edit pesan dalam 15 menit.</div>
+    </div>
+    <div class="welcome-slide">
+      <div class="welcome-emoji">🚀</div>
+      <div class="welcome-title">Siap Mulai Ngobrol?</div>
+      <div class="welcome-desc">Daftar atau masuk sekarang dan mulai percakapanmu yang pertama di TalkMe.</div>
+    </div>
+  </div>
+  <div class="welcome-dots" id="welcomeDots"></div>
+  <button class="welcome-btn" id="welcomeBtn" onclick="rcWelcomeNext()">Lanjut</button>
+</div>
+
+<!-- ══ LOGIN / REGISTER SCREEN ══ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-blob auth-blob-1"></div>
+  <div class="auth-blob auth-blob-2"></div>
+  <div class="auth-blob auth-blob-3"></div>
+  <div class="auth-wrap">
+    <div class="auth-logo">💬</div>
+    <div class="auth-card">
+      <div class="auth-title">TalkMe</div>
+      <div class="auth-sub">CHAT ELEGAN &amp; SIMPEL</div>
+      <div class="auth-tabs">
+        <div class="auth-tab-slider" id="authTabSlider"></div>
+        <div class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">🔐 Masuk</div>
+        <div class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">✨ Daftar</div>
+      </div>
+
+      <div id="formLogin">
+        <div class="auth-field">
+          <span class="auth-input-ic">👤</span>
+          <input class="auth-input" id="loginUser" placeholder="Username" autocomplete="username">
+        </div>
+        <div class="auth-field">
+          <span class="auth-input-ic">🔒</span>
+          <input class="auth-input" id="loginPass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+          <button type="button" class="auth-eye" onclick="rcTogglePw('loginPass', this)" tabindex="-1">👁</button>
+        </div>
+        <button class="auth-btn" id="loginBtn" onclick="doLogin()"><span>🔐 Masuk</span></button>
+      </div>
+
+      <div id="formRegister" style="display:none;">
+        <div class="auth-field">
+          <span class="auth-input-ic">👤</span>
+          <input class="auth-input" id="regUser" placeholder="Username" autocomplete="username">
+        </div>
+        <div class="auth-field">
+          <span class="auth-input-ic">🔒</span>
+          <input class="auth-input" id="regPass" type="password" placeholder="Password" autocomplete="new-password">
+          <button type="button" class="auth-eye" onclick="rcTogglePw('regPass', this)" tabindex="-1">👁</button>
+        </div>
+        <div class="auth-field">
+          <span class="auth-input-ic">🔒</span>
+          <input class="auth-input" id="regPass2" type="password" placeholder="Ulangi Password" autocomplete="new-password" onkeydown="if(event.key==='Enter') doRegister()">
+          <button type="button" class="auth-eye" onclick="rcTogglePw('regPass2', this)" tabindex="-1">👁</button>
+        </div>
+        <button class="auth-btn" id="registerBtn" onclick="doRegister()"><span>✨ Daftar Sekarang</span></button>
+      </div>
+
+      <div class="auth-err" id="authErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TALKME APP ══ -->
+<div class="rc-app" id="rcOverlay">
+  <!-- TOPBAR -->
+  <div class="rc-topbar" id="rcTopbar">
+    <button class="rc-back-btn" id="rcBackBtn" onclick="rcClose()">←</button>
+    <div class="rc-avatar" id="rcTopbarAvatar">💬</div>
+    <div style="flex:1;min-width:0;">
+      <div class="rc-topbar-title" id="rcTopbarTitle">TalkMe</div>
+      <div class="rc-topbar-sub" id="rcTopbarSub">Pilih teman untuk chat</div>
+    </div>
+    <button class="rc-icon-btn" id="rcSearchToggleBtn" onclick="rcToggleSearch()" title="Cari pesan" style="display:none;">🔍</button>
+    <button class="rc-icon-btn" id="rcCallBtn" onclick="rcStartCall()" title="Telepon" style="display:none;">📞</button>
+    <button class="rc-icon-btn" id="rcDarkToggle" onclick="rcToggleDark()" title="Mode Gelap">🌙</button>
+    <div class="rc-menu-wrap">
+      <button class="rc-icon-btn" id="rcMenuBtn" onclick="rcToggleMenu()" title="Menu">⋮</button>
+      <div class="rc-menu-dropdown" id="rcMenuDropdown">
+        <button id="rcContactInfoBtn" onclick="rcOpenContactInfo()" style="display:none;">👤 Info Kontak</button>
+        <button id="rcContactToggleMenuBtn" onclick="rcToggleContactCurrent(); document.getElementById('rcMenuDropdown').classList.remove('show');" style="display:none;">👤 Tambah ke Kontak</button>
+        <button id="rcMuteMenuBtn" onclick="rcToggleMuteCurrent()" style="display:none;">🔕 Bisukan</button>
+        <button id="rcArchiveMenuBtn" onclick="rcToggleArchiveCurrent()" style="display:none;">🗄️ Arsipkan Chat</button>
+        <button id="rcSelectModeBtn" onclick="rcEnterSelectMode()" style="display:none;">☑️ Pilih Pesan</button>
+        <button id="rcExportMenuBtn" onclick="rcExportChat()" style="display:none;">📤 Ekspor Obrolan</button>
+        <button id="rcClearChatMenuBtn" onclick="rcClearChat()" style="display:none;">🧹 Hapus Chat</button>
+        <button id="rcStarredMenuBtn" onclick="rcOpenStarred()">⭐ Pesan Berbintang</button>
+        <button id="rcBlockMenuBtn" onclick="rcToggleBlockCurrent()" style="display:none;">🚫 Blokir Pengguna</button>
+        <button onclick="rcOpenSettings()">⚙️ Pengaturan</button>
+        <button onclick="doLogout()">🚪 Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACTS VIEW -->
+  <div id="rcContactsView" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="rc-search-wrap">
+      <span>🔍</span>
+      <input class="rc-search" id="rcSearch" placeholder="Cari username untuk mulai chat baru" oninput="rcSearchUsers()" />
+    </div>
+    <div class="rc-filter-chips" id="rcFilterChips">
+      <button class="rc-chip active" data-filter="semua" onclick="rcSetFilter('semua')">Semua</button>
+      <button class="rc-chip" data-filter="unread" onclick="rcSetFilter('unread')">Belum Dibaca <span class="rc-chip-badge" id="rcUnreadChipBadge" style="display:none;">0</span></button>
+      <button class="rc-chip" data-filter="favorit" onclick="rcSetFilter('favorit')">⭐ Favorit</button>
+      <button class="rc-chip" data-filter="kontak" onclick="rcSetFilter('kontak')">👤 Kontak</button>
+    </div>
+    <div class="rc-pin-hint" id="rcPinHint" style="display:none;">
+      <span>💡 Tekan &amp; tahan sebuah chat untuk menyematkannya ke atas</span>
+      <button onclick="rcDismissPinHint()">✕</button>
+    </div>
+    <div class="rc-list" id="rcUserList">
+      <div class="rc-empty">⏳ Memuat daftar member...</div>
+    </div>
+    <div class="rc-fab-row">
+      <button class="rc-fab" onclick="rcOpenAddContact()" title="Tambah Kontak">➕</button>
+    </div>
+    <div class="rc-bottom-nav">
+      <button class="rc-nav-tab active" data-tab="chat" onclick="rcNavTab('chat', this)">
+        <span class="rc-nav-icon">💬</span><span>Chat</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="update" onclick="rcNavTab('update', this)">
+        <span class="rc-nav-icon">🔄</span><span>Pembaruan</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="community" onclick="rcNavTab('community', this)">
+        <span class="rc-nav-icon">👥</span><span>Komunitas</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="calls" onclick="rcNavTab('calls', this)">
+        <span class="rc-nav-icon">📞</span><span>Panggilan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- COMMUNITY VIEW: GRUP & SALURAN -->
+  <div id="rcCommunityView" style="display:none;flex-direction:column;flex:1;overflow:hidden;position:relative;">
+    <div class="rc-filter-chips" style="padding:10px 16px 4px;">
+      <span style="font-size:0.78rem;font-weight:800;color:#7a9186;">Grup &amp; saluran yang kamu ikuti</span>
+    </div>
+    <div class="rc-list" id="rcGroupList">
+      <div class="rc-empty">👥 Belum ada grup atau saluran.<br>Ketuk tombol + untuk membuat baru.</div>
+    </div>
+    <div class="rc-fab-row">
+      <button class="rc-fab secondary" onclick="rcOpenGroupCreate('channel')" title="Buat Saluran">📢</button>
+      <button class="rc-fab" onclick="rcOpenGroupCreate('group')" title="Buat Grup">👥</button>
+    </div>
+    <div class="rc-bottom-nav">
+      <button class="rc-nav-tab" data-tab="chat" onclick="rcNavTab('chat', this)">
+        <span class="rc-nav-icon">💬</span><span>Chat</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="update" onclick="rcNavTab('update', this)">
+        <span class="rc-nav-icon">🔄</span><span>Pembaruan</span>
+      </button>
+      <button class="rc-nav-tab active" data-tab="community" onclick="rcNavTab('community', this)">
+        <span class="rc-nav-icon">👥</span><span>Komunitas</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="calls" onclick="rcNavTab('calls', this)">
+        <span class="rc-nav-icon">📞</span><span>Panggilan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- CHAT VIEW -->
+  <div id="rcChatView" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <div id="rcBlockBanner" style="display:none;padding:9px 14px;background:#fde8e8;color:#b23b3b;font-size:0.72rem;font-weight:800;text-align:center;flex-shrink:0;">
+      🚫 Anda memblokir pengguna ini
+    </div>
+    <div class="rc-chat-search-bar" id="rcSearchBar" style="display:none;">
+      <span>🔍</span>
+      <input id="rcChatSearchInput" placeholder="Cari di percakapan..." oninput="rcFilterMessages()">
+      <button onclick="rcToggleSearch()">✕</button>
+    </div>
+    <div class="rc-selectbar" id="rcSelectBar">
+      <button onclick="rcExitSelectMode()">✕ Batal</button>
+      <b id="rcSelectCount">0 dipilih</b>
+      <button onclick="rcForwardSelected()">↪ Teruskan</button>
+      <button onclick="rcDeleteSelected()">🗑️ Hapus</button>
+    </div>
+    <div class="rc-messages" id="rcMessages">
+      <div class="rc-no-msg">⏳ Memuat pesan...</div>
+    </div>
+    <div class="rc-reply-bar" id="rcReplyBar">
+      <div class="rc-reply-bar-text">↩ Membalas <b id="rcReplyFrom"></b>: <span id="rcReplySnippet"></span></div>
+      <button class="rc-reply-cancel" onclick="rcCancelReply()">✕</button>
+    </div>
+    <div class="rc-emoji-bar" id="rcEmojiBar"></div>
+    <input type="file" id="rcImgInput" accept="image/*" style="display:none" onchange="rcHandleImageSelect(event)">
+    <div class="rc-inputbar">
+      <button class="rc-emoji-toggle" id="rcEmojiToggle" onclick="rcToggleEmoji()" title="Emoji">😊</button>
+      <button class="rc-emoji-toggle" id="rcImgToggleBtn" onclick="document.getElementById('rcImgInput').click()" title="Kirim Gambar">🖼️</button>
+      <textarea class="rc-input" id="rcMsgInput" placeholder="Ketik pesan..." rows="1"
+        oninput="rcAutoResize(this)" onkeydown="rcHandleKey(event)"></textarea>
+      <button class="rc-send" id="rcSendBtn" onclick="rcSend()">➤</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS VIEW -->
+  <div class="rc-settings-view" id="rcSettingsView">
+    <div class="rc-set-profile">
+      <div class="rc-set-avatar" id="rcSetAvatar">?</div>
+      <div style="flex:1;min-width:0;">
+        <div class="rc-set-uname" id="rcSetUname">-</div>
+        <textarea class="rc-set-bio" id="rcSetBio" rows="2" maxlength="80" placeholder="Tulis info singkat tentang kamu..." onblur="rcSaveBio()"></textarea>
+      </div>
+    </div>
+
+    <div class="rc-set-section-lbl">🔔 Notifikasi</div>
+    <div class="rc-set-item" onclick="rcToggleSetting('notifSound','rcSwNotif')">
+      <div class="rc-set-ic">🔊</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Suara Notifikasi</div>
+        <div class="rc-set-sub2">Bunyi saat pesan baru masuk</div>
+      </div>
+      <div class="rc-switch" id="rcSwNotif"></div>
+    </div>
+
+    <div class="rc-set-section-lbl">🎨 Tampilan</div>
+    <div class="rc-set-item" onclick="rcToggleDark(); rcSyncDarkSwitch();">
+      <div class="rc-set-ic">🌙</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Mode Gelap</div>
+        <div class="rc-set-sub2">Tampilan gelap untuk mata lebih nyaman</div>
+      </div>
+      <div class="rc-switch" id="rcSwDark"></div>
+    </div>
+    <div class="rc-set-item" style="cursor:default;">
+      <div class="rc-set-ic">🖼️</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Wallpaper Chat</div>
+        <div class="rc-set-sub2">Pilih warna latar percakapan</div>
+      </div>
+    </div>
+    <div class="rc-wall-row" id="rcWallRow"></div>
+    <div class="rc-set-item" style="cursor:default;">
+      <div class="rc-set-ic">🔤</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Ukuran Teks Chat</div>
+        <div class="rc-set-sub2">Sesuaikan ukuran huruf bubble pesan</div>
+      </div>
+    </div>
+    <div class="rc-wall-row" id="rcFontRow" style="gap:8px;">
+      <button class="rc-chip" data-size="small" onclick="rcSetFontSize('small')">Kecil</button>
+      <button class="rc-chip" data-size="medium" onclick="rcSetFontSize('medium')">Sedang</button>
+      <button class="rc-chip" data-size="large" onclick="rcSetFontSize('large')">Besar</button>
+    </div>
+
+    <div class="rc-set-section-lbl">💬 Chat</div>
+    <div class="rc-set-item" onclick="rcToggleSetting('enterSend','rcSwEnter')">
+      <div class="rc-set-ic">⏎</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Kirim dengan Enter</div>
+        <div class="rc-set-sub2">Tombol Enter langsung mengirim pesan</div>
+      </div>
+      <div class="rc-switch" id="rcSwEnter"></div>
+    </div>
+
+    <div class="rc-set-section-lbl">🔒 Privasi</div>
+    <div class="rc-set-item" onclick="rcToggleSetting('showPreview','rcSwPreview'); rcRenderUsers(rcAllUsers);">
+      <div class="rc-set-ic">👁️</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Pratinjau Pesan</div>
+        <div class="rc-set-sub2">Tampilkan isi pesan terakhir di daftar chat</div>
+      </div>
+      <div class="rc-switch" id="rcSwPreview"></div>
+    </div>
+    <div class="rc-set-item" onclick="rcToggleSetting('sendReadReceipts','rcSwReceipts')">
+      <div class="rc-set-ic">✓✓</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Centang Biru</div>
+        <div class="rc-set-sub2">Kirim tanda telah membaca ke lawan bicara</div>
+      </div>
+      <div class="rc-switch" id="rcSwReceipts"></div>
+    </div>
+    <div class="rc-set-item" onclick="rcToggleSetting('showLastSeen','rcSwLastSeen')">
+      <div class="rc-set-ic">🕒</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Status Online &amp; Terakhir Dilihat</div>
+        <div class="rc-set-sub2">Tampilkan info aktif di layar chat</div>
+      </div>
+      <div class="rc-switch" id="rcSwLastSeen"></div>
+    </div>
+    <div class="rc-set-item" onclick="rcOpenBlockList()">
+      <div class="rc-set-ic">🚫</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2">Pengguna Diblokir</div>
+        <div class="rc-set-sub2" id="rcBlockCountSub">Tidak ada</div>
+      </div>
+    </div>
+
+    <div class="rc-set-section-lbl">🗄️ Lainnya</div>
+    <div class="rc-set-item" onclick="rcClearCache()">
+      <div class="rc-set-ic rc-set-danger">🧹</div>
+      <div class="rc-set-txt">
+        <div class="rc-set-title2 rc-set-danger">Bersihkan Cache Lokal</div>
+        <div class="rc-set-sub2">Hapus sematan, favorit &amp; preferensi di perangkat ini</div>
+      </div>
+    </div>
+    <div class="rc-set-item" onclick="doLogout()">
+      <div class="rc-set-ic rc-set-danger">🚪</div>
+      <div class="rc-set-txt"><div class="rc-set-title2 rc-set-danger">Keluar Akun</div></div>
+    </div>
+    <div class="rc-set-version">💬 TalkMe · v1.1</div>
+  </div>
+
+  <!-- STATUS / PEMBARUAN VIEW -->
+  <div class="rc-status-view" id="rcStatusView">
+    <div class="rc-status-mine" onclick="rcOnMyStatusClick()">
+      <div class="rc-status-ring empty" id="rcMyStatusRing">
+        <div class="rc-status-ring-inner" id="rcMyStatusRingInner">?</div>
+        <div class="rc-status-plus" id="rcMyStatusPlus">+</div>
+      </div>
+      <div>
+        <div class="rc-status-name">Status Saya</div>
+        <div class="rc-status-time" id="rcMyStatusSub">Ketuk untuk tambah pembaruan</div>
+      </div>
+    </div>
+
+    <div class="rc-status-composer" id="rcStatusComposer">
+      <div class="rc-status-taparea" id="rcStatusTapArea">
+        <textarea id="rcStatusText" maxlength="120" rows="3" placeholder="Tulis pembaruan..."></textarea>
+      </div>
+      <div class="rc-bgswatch-row" id="rcBgSwatchRow"></div>
+      <button class="rc-status-share-btn" onclick="rcPostStatus()">📤 Bagikan Pembaruan</button>
+    </div>
+
+    <div class="rc-set-section-lbl" id="rcOtherStatusLbl" style="display:none;">Update Terbaru</div>
+    <div id="rcOtherStatusList"></div>
+    <div class="rc-status-note" id="rcStatusNote"></div>
+
+    <div style="flex:1;"></div>
+    <div class="rc-bottom-nav">
+      <button class="rc-nav-tab" data-tab="chat" onclick="rcNavTab('chat', this)">
+        <span class="rc-nav-icon">💬</span><span>Chat</span>
+      </button>
+      <button class="rc-nav-tab active" data-tab="update" onclick="rcNavTab('update', this)">
+        <span class="rc-nav-icon">🔄</span><span>Pembaruan</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="community" onclick="rcNavTab('community', this)">
+        <span class="rc-nav-icon">👥</span><span>Komunitas</span>
+      </button>
+      <button class="rc-nav-tab" data-tab="calls" onclick="rcNavTab('calls', this)">
+        <span class="rc-nav-icon">📞</span><span>Panggilan</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: INFO KONTAK -->
+<div class="rc-panel-view" id="rcContactInfoView">
+  <div class="rc-info-profile">
+    <div class="rc-info-avatar" id="rcInfoAvatar">?</div>
+    <div class="rc-info-name" id="rcInfoName">-</div>
+    <div class="rc-info-bio" id="rcInfoBio"></div>
+    <div class="rc-nick-edit">
+      <input id="rcNickInput" placeholder="Nama panggilan (opsional)">
+      <button onclick="rcSaveNickname()">Simpan</button>
+    </div>
+  </div>
+  <div class="rc-set-section-lbl">🖼️ Media Dibagikan</div>
+  <div class="rc-info-media-grid" id="rcInfoMediaGrid"></div>
+  <div class="rc-set-section-lbl">⚙️ Aksi</div>
+  <div class="rc-set-item" onclick="rcToggleContactCurrent()">
+    <div class="rc-set-ic">👤</div>
+    <div class="rc-set-txt"><div class="rc-set-title2" id="rcInfoContactTitle">Tambah ke Kontak</div><div class="rc-set-sub2">Simpan agar mudah ditemukan</div></div>
+  </div>
+  <div class="rc-set-item" onclick="rcToggleMuteCurrent()">
+    <div class="rc-set-ic">🔕</div>
+    <div class="rc-set-txt"><div class="rc-set-title2">Bisukan Notifikasi</div><div class="rc-set-sub2" id="rcInfoMuteSub">Nonaktif</div></div>
+  </div>
+  <div class="rc-set-item" onclick="rcToggleDisappearingCurrent()">
+    <div class="rc-set-ic">⏳</div>
+    <div class="rc-set-txt"><div class="rc-set-title2">Pesan Sementara</div><div class="rc-set-sub2" id="rcInfoDisappearSub">Nonaktif · pesan hilang setelah 24 jam bila aktif</div></div>
+  </div>
+  <div class="rc-set-item" onclick="rcToggleArchiveCurrent()">
+    <div class="rc-set-ic">🗄️</div>
+    <div class="rc-set-txt"><div class="rc-set-title2" id="rcInfoArchiveTitle">Arsipkan Chat</div></div>
+  </div>
+  <div class="rc-set-item" onclick="rcExportChat()">
+    <div class="rc-set-ic">📤</div>
+    <div class="rc-set-txt"><div class="rc-set-title2">Ekspor Obrolan (.txt)</div></div>
+  </div>
+  <div class="rc-set-item rc-set-danger" onclick="rcClearChat()">
+    <div class="rc-set-ic">🧹</div>
+    <div class="rc-set-txt"><div class="rc-set-title2">Hapus Chat</div></div>
+  </div>
+  <div class="rc-set-item rc-set-danger" onclick="rcToggleBlockCurrent()">
+    <div class="rc-set-ic">🚫</div>
+    <div class="rc-set-txt"><div class="rc-set-title2" id="rcInfoBlockTitle">Blokir Pengguna</div></div>
+  </div>
+</div>
+
+<!-- PANEL: PESAN BERBINTANG -->
+<div class="rc-panel-view" id="rcStarredView">
+  <div id="rcStarredList"></div>
+</div>
+
+
+<!-- PANEL: CHAT DIARSIPKAN -->
+<div class="rc-panel-view" id="rcArchivedView">
+  <div id="rcArchivedList"></div>
+</div>
+
+<!-- MODAL: TAMBAH KONTAK -->
+<div class="rc-modal-ov" id="rcAddContactModal" onclick="if(event.target===this) rcCloseAddContact()">
+  <div class="rc-modal-sheet">
+    <div class="rc-modal-head">
+      <b>➕ Tambah Kontak</b>
+      <button class="rc-modal-close" onclick="rcCloseAddContact()">✕</button>
+    </div>
+    <div class="rc-modal-body">
+      <input class="rc-modal-input" id="rcAddContactInput" placeholder="Cari username..." oninput="rcRenderAddContactResults()">
+      <div id="rcAddContactResults"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AKSI CEPAT KONTAK (tekan & tahan sebuah chat) -->
+<div class="rc-modal-ov" id="rcContactQuickModal" onclick="if(event.target===this) rcCloseContactQuick()">
+  <div class="rc-modal-sheet">
+    <div class="rc-modal-head">
+      <b id="rcContactQuickTitle">Kontak</b>
+      <button class="rc-modal-close" onclick="rcCloseContactQuick()">✕</button>
+    </div>
+    <div class="rc-modal-body" id="rcContactQuickBody" style="display:flex;flex-direction:column;gap:4px;"></div>
+  </div>
+</div>
+
+<!-- MODAL: BUAT GRUP / SALURAN -->
+<div class="rc-modal-ov" id="rcGroupCreateModal" onclick="if(event.target===this) rcCloseGroupCreate()">
+  <div class="rc-modal-sheet">
+    <div class="rc-modal-head">
+      <button class="rc-modal-close" onclick="rcCloseGroupCreate()">←</button>
+      <b id="rcGroupCreateTitle">👥 Buat Grup</b>
+    </div>
+    <div class="rc-modal-body">
+      <input class="rc-modal-input" id="rcGroupNameInput" placeholder="Nama grup / saluran...">
+      <div class="rc-set-section-lbl" style="padding:0 0 8px;">Pilih anggota</div>
+      <div id="rcGroupMemberList"></div>
+    </div>
+    <div class="rc-modal-foot">
+      <button class="rc-status-share-btn" onclick="rcConfirmCreateGroup()">✅ Buat Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- STORY VIEWER -->
+<div class="rc-story-viewer" id="rcStoryViewer">
+  <div class="rc-story-bars" id="rcStoryBars"></div>
+  <div class="rc-story-head">
+    <div class="rc-status-ring-inner" style="width:30px;height:30px;font-size:0.8rem;flex-shrink:0;" id="rcStoryAvatar"></div>
+    <div class="rc-story-head-name" id="rcStoryName"></div>
+    <div class="rc-story-head-time" id="rcStoryTime"></div>
+    <button class="rc-story-close" onclick="rcCloseStory()">✕</button>
+  </div>
+  <div class="rc-story-body" id="rcStoryBody">
+    <div class="rc-story-tap-zones">
+      <div onclick="rcStoryPrev()"></div>
+      <div onclick="rcStoryNext()"></div>
+    </div>
+    <span id="rcStoryText"></span>
+    <button class="rc-story-del" id="rcStoryDelBtn" style="display:none;" onclick="rcDeleteMyStatus()">🗑️ Hapus</button>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="rc-lightbox" id="rcLightbox" onclick="rcCloseLightbox(event)">
+  <button class="rc-lightbox-close" onclick="rcCloseLightbox(event)">✕</button>
+  <img id="rcLightboxImg" src="" onclick="event.stopPropagation()">
+</div>
+
+<!-- CALL OVERLAY -->
+<div class="rc-call-ov" id="rcCallOverlay">
+  <div class="rc-call-avatar" id="rcCallAvatar">?</div>
+  <div class="rc-call-name" id="rcCallName">-</div>
+  <div class="rc-call-status" id="rcCallStatus">Memanggil...</div>
+  <div class="rc-call-controls">
+    <button class="rc-call-btn secondary" id="rcCallMuteBtn" onclick="rcToggleCallMute()" title="Bisukan mic" style="display:none;">🎙️</button>
+    <button class="rc-call-btn accept" id="rcCallAcceptBtn" onclick="rcAcceptCall()" title="Terima" style="display:none;">📞</button>
+    <button class="rc-call-btn decline" id="rcCallDeclineBtn" onclick="rcDeclineCall()" title="Tolak" style="display:none;">✕</button>
+    <button class="rc-call-btn decline" id="rcCallEndBtn" onclick="rcEndCall()" title="Akhiri" style="display:none;">✕</button>
+  </div>
+  <audio id="rcRemoteAudio" autoplay playsinline></audio>
+</div>
+
+<!-- TOAST -->
+<div class="rc-toast" id="pbToast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   ⚙️ CONFIG — same backend used to store accounts & messages
+══════════════════════════════════════════════════════ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbydXrf_B6Pb_uhMsfkQVfnbaEkoKq-jHkRDf-B872ggiBRJbju7mkWE1Z5ZX3zZICbipA/exec';
+
+/* ── Auth state ── */
+let currentUser = JSON.parse(localStorage.getItem('rst_user') || 'null');
+
+/* ── Helper: selalu hasilkan waktu WIB (UTC+7) ── */
+function _wibDate() {
+  const now = new Date();
+  return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
+}
+const _BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function _pad2(n){ return String(n).padStart(2,'0'); }
+
+function showPbToast(msg) {
+  const t = document.getElementById('pbToast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function gasRequest(params) {
+  const url = GAS_URL + '?' + new URLSearchParams(params).toString();
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('Network error');
+  return await res.json();
+}
+
+/* ══════════════════════════════════════════════════════
+   👋 WELCOME SCREEN
+══════════════════════════════════════════════════════ */
+let rcWelcomeIdx = 0;
+const RC_WELCOME_SLIDES = document.querySelectorAll('.welcome-slide').length;
+
+function rcRenderWelcomeDots(){
+  const dots = document.getElementById('welcomeDots');
+  dots.innerHTML = Array.from({length:RC_WELCOME_SLIDES}).map((_,i)=>
+    `<div class="welcome-dot ${i===rcWelcomeIdx?'active':''}"></div>`
+  ).join('');
+}
+function rcGotoWelcomeSlide(i){
+  rcWelcomeIdx = Math.max(0, Math.min(RC_WELCOME_SLIDES - 1, i));
+  document.getElementById('welcomeTrack').style.transform = `translateX(-${rcWelcomeIdx * 100}%)`;
+  document.getElementById('welcomeBtn').textContent = (rcWelcomeIdx === RC_WELCOME_SLIDES - 1) ? '✨ Mulai Sekarang' : 'Lanjut';
+  rcRenderWelcomeDots();
+}
+function rcWelcomeNext(){
+  if (rcWelcomeIdx >= RC_WELCOME_SLIDES - 1) { rcFinishWelcome(); return; }
+  rcGotoWelcomeSlide(rcWelcomeIdx + 1);
+}
+function rcFinishWelcome(){
+  localStorage.setItem('talkup_welcomed', '1');
+  document.getElementById('welcomeScreen').style.display = 'none';
+  if (currentUser) { enterApp(); } else { document.getElementById('authScreen').style.display = 'flex'; }
+}
+/* swipe gesture di welcome screen */
+(function initWelcomeSwipe(){
+  const track = document.getElementById('welcomeTrack');
+  let startX = 0, dx = 0, dragging = false;
+  track.addEventListener('touchstart', e => { dragging = true; startX = e.touches[0].clientX; }, {passive:true});
+  track.addEventListener('touchmove', e => { if(!dragging) return; dx = e.touches[0].clientX - startX; }, {passive:true});
+  track.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    if (dx < -40) rcGotoWelcomeSlide(rcWelcomeIdx + 1);
+    else if (dx > 40) rcGotoWelcomeSlide(rcWelcomeIdx - 1);
+    dx = 0;
+  });
+})();
+rcRenderWelcomeDots();
+
+/* ══════════════════════════════════════════════════════
+   🔐 AUTH SCREEN
+══════════════════════════════════════════════════════ */
+function switchAuthTab(tab) {
+  document.getElementById('authErr').textContent = '';
+  document.getElementById('formLogin').style.display    = tab==='login'    ? '' : 'none';
+  document.getElementById('formRegister').style.display = tab==='register' ? '' : 'none';
+  document.getElementById('tabLoginBtn').classList.toggle('active',    tab==='login');
+  document.getElementById('tabRegisterBtn').classList.toggle('active', tab==='register');
+  const slider = document.getElementById('authTabSlider');
+  if (slider) slider.style.transform = tab === 'register' ? 'translateX(100%)' : 'translateX(0)';
+}
+function rcTogglePw(id, btn){
+  const input = document.getElementById(id);
+  if (!input) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '👁' : '🙈';
+}
+
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl    = document.getElementById('authErr');
+  if (!username || !password) { errEl.textContent = '⚠️ Isi username & password ya!'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = '⏳ Memeriksa...';
+  errEl.textContent = '';
+  try {
+    const res = await gasRequest({ action: 'login', username, password });
+    if (res.banned) {
+      errEl.textContent = '🚫 Akun ini telah dibanned oleh admin.';
+      return;
+    }
+    if (res.ok) {
+      currentUser = { username: res.username };
+      localStorage.setItem('rst_user', JSON.stringify(currentUser));
+      enterApp();
+    } else {
+      errEl.textContent = '❌ ' + (res.msg || 'Username/password salah!');
+    }
+  } catch(e) {
+    errEl.textContent = '❌ Gagal terhubung ke server.';
+  } finally {
+    btn.disabled = false; btn.textContent = '🔐 Masuk';
+  }
+}
+
+async function doRegister() {
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  const pass2    = document.getElementById('regPass2').value;
+  const errEl    = document.getElementById('authErr');
+  if (!username || !password) { errEl.textContent = '⚠️ Isi semua kolom ya!'; return; }
+  if (password !== pass2) { errEl.textContent = '❌ Password tidak cocok!'; return; }
+  if (username.length < 3) { errEl.textContent = '⚠️ Username minimal 3 karakter!'; return; }
+  if (password.length < 4) { errEl.textContent = '⚠️ Password minimal 4 karakter!'; return; }
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true; btn.textContent = '⏳ Mendaftar...';
+  errEl.textContent = '';
+  try {
+    const res = await gasRequest({ action: 'register', username, password });
+    if (res.ok) {
+      currentUser = { username: res.username };
+      localStorage.setItem('rst_user', JSON.stringify(currentUser));
+      enterApp();
+    } else {
+      errEl.textContent = '❌ ' + (res.msg || 'Gagal daftar.');
+    }
+  } catch(e) {
+    errEl.textContent = '❌ Gagal terhubung ke server.';
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ Daftar Sekarang';
+  }
+}
+
+function doLogout() {
+  rcClose();
+  currentUser = null;
+  localStorage.removeItem('rst_user');
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+function enterApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  rcOpenApp();
+}
+
+/* ══════════════════════════════════════════════════════
+   💬 TALKME CHAT — JS
+══════════════════════════════════════════════════════ */
+let rcChatUser    = null;
+let rcRefTimer    = null;
+let rcAllUsers    = [];
+let rcActiveGroup = null;   // objek grup/saluran aktif ({id,name,type,members,owner}) atau null jika chat 1:1
+let rcGroupMsgCache = [];   // cache pesan grup gabungan yang sedang dibuka
+let rcMsgsCache   = [];
+let rcReplyTarget = null;
+
+function rcInitial(n){ return (n||'?').charAt(0).toUpperCase(); }
+function rcEscHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rcNow(){
+  const w = _wibDate();
+  return `${_pad2(w.getDate())} ${_BULAN[w.getMonth()]} ${w.getFullYear()} ${_pad2(w.getHours())}:${_pad2(w.getMinutes())}`;
+}
+function rcFmtTime(s){
+  if(!s) return '';
+  // waktu disimpan dalam format kanonik WIB agar urutan pesan tetap konsisten di server,
+  // tapi ditampilkan sesuai zona waktu perangkat masing-masing pengguna (WIB/WITA/WIT otomatis)
+  const ms = rcParseWaktuMs(s);
+  if (!ms) { const m = s.match(/(\d{2}:\d{2})/); return m ? m[1] : s; }
+  const d = new Date(ms);
+  return _pad2(d.getHours()) + ':' + _pad2(d.getMinutes());
+}
+/* ── 📅 Label hari (Hari Ini / Kemarin / tanggal) untuk pemisah & preview chat ── */
+function _startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
+function rcDayLabel(ms){
+  const d = new Date(ms);
+  const diffDays = Math.round((_startOfDay(new Date()) - _startOfDay(d)) / 86400000);
+  if (diffDays === 0) return 'Hari Ini';
+  if (diffDays === 1) return 'Kemarin';
+  return _pad2(d.getDate()) + ' ' + _BULAN[d.getMonth()] + ' ' + d.getFullYear();
+}
+function rcDayKeyOf(ms){ const d = new Date(ms); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+/* untuk daftar chat: tampilkan jam kalau hari ini, tampilkan tanggal singkat kalau bukan hari ini */
+function rcFmtListTime(s){
+  const ms = rcParseWaktuMs(s);
+  if (!ms) return rcFmtTime(s);
+  const diffDays = Math.round((_startOfDay(new Date()) - _startOfDay(new Date(ms))) / 86400000);
+  if (diffDays === 0) return rcFmtTime(s);
+  if (diffDays === 1) return 'Kemarin';
+  const d = new Date(ms);
+  return _pad2(d.getDate()) + '/' + _pad2(d.getMonth()+1) + '/' + String(d.getFullYear()).slice(2);
+}
+
+/* ── envelope: every message is stored as a JSON string so we can carry
+   type (text/image), reply-quote data, etc. Falls back to plain text
+   for any older/legacy message. 'receipt' and 'reaction' are internal
+   event types sent through the same channel — they update ticks/reactions
+   but are never rendered as chat bubbles. ── */
+function rcParseEnvelope(teks){
+  try{
+    const p = JSON.parse(teks);
+    if (p && typeof p === 'object' && p.type) return p;
+  } catch(e){}
+  return { type:'text', text:teks, reply:null };
+}
+
+/* ── open app (contacts view) ── */
+function rcOpenApp(){
+  document.getElementById('rcOverlay').classList.add('rc-open');
+  rcShowContacts();
+  rcLoadUsers();
+}
+function rcClose(){
+  clearInterval(rcRefTimer);
+  rcChatUser = null;
+  document.getElementById('rcOverlay').classList.remove('rc-open');
+}
+
+/* ── contacts ── */
+async function rcLoadUsers(){
+  try{
+    const q = document.getElementById('rcSearch').value.trim();
+    const url = GAS_URL + '?action=getUsers' + (q ? '&q=' + encodeURIComponent(q) : '');
+    const res = await fetch(url);
+    rcAllUsers = await res.json();
+    rcRenderUsers(rcAllUsers);
+  } catch(e){ document.getElementById('rcUserList').innerHTML='<div class="rc-empty">⚠️ Gagal memuat pengguna</div>'; }
+}
+function rcSearchUsers(){
+  rcRenderUsers(rcAllUsers);
+}
+function rcGetPreviews(){
+  try{ return JSON.parse(localStorage.getItem('talkup_previews_' + (currentUser?currentUser.username:'')) || '{}'); } catch(e){ return {}; }
+}
+function rcSavePreview(otherUser, entry){
+  const all = rcGetPreviews();
+  all[otherUser] = entry;
+  localStorage.setItem('talkup_previews_' + currentUser.username, JSON.stringify(all));
+}
+
+/* ── favorit / sematkan chat (tekan & tahan) ── */
+function rcGetFavorites(){
+  try{ return JSON.parse(localStorage.getItem('talkup_favorites_' + (currentUser?currentUser.username:'')) || '[]'); } catch(e){ return []; }
+}
+function rcToggleFavorite(username){
+  let favs = rcGetFavorites();
+  const isFav = favs.includes(username);
+  favs = isFav ? favs.filter(f => f !== username) : [...favs, username];
+  localStorage.setItem('talkup_favorites_' + currentUser.username, JSON.stringify(favs));
+  if (navigator.vibrate) navigator.vibrate(30);
+  showPbToast(isFav ? ('📌 ' + username + ' dilepas dari sematan') : ('📌 ' + username + ' disematkan ke atas'));
+  rcRenderUsers(rcAllUsers);
+}
+let rcPressTimer = null, rcPressFired = false;
+function rcPressStart(username){
+  rcPressFired = false;
+  clearTimeout(rcPressTimer);
+  rcPressTimer = setTimeout(() => { rcPressFired = true; rcOpenContactQuickMenu(username); }, 480);
+}
+function rcPressEnd(){ clearTimeout(rcPressTimer); }
+function rcContactClick(username){
+  if (rcPressFired) { rcPressFired = false; return; }
+  rcOpenChat(username);
+}
+
+/* ── 📇 Menu aksi cepat per kontak (tekan & tahan): sematkan, tambah/batal kontak, bisukan, arsip ── */
+function rcOpenContactQuickMenu(username){
+  if (navigator.vibrate) navigator.vibrate(30);
+  const uname   = username.replace(/'/g,"\\'");
+  const isFav   = rcGetFavorites().includes(username);
+  const isCon   = rcIsContact(username);
+  const isMuted = rcIsMuted(username);
+  const isArch  = rcGetArchived().includes(username);
+  document.getElementById('rcContactQuickTitle').textContent = rcGetNickname(username) || username;
+  document.getElementById('rcContactQuickBody').innerHTML = `
+    <button class="rc-quick-action" onclick="rcToggleFavorite('${uname}'); rcCloseContactQuick();">${isFav ? '📌 Lepas Sematan' : '📌 Sematkan Chat'}</button>
+    <button class="rc-quick-action" onclick="${isCon ? 'rcRemoveContact' : 'rcAddContact'}('${uname}'); rcCloseContactQuick(); rcRenderUsers(rcAllUsers);">${isCon ? '👤 Batalkan dari Kontak' : '👤 Tambah ke Kontak'}</button>
+    <button class="rc-quick-action" onclick="rcToggleMuteFor('${uname}'); rcCloseContactQuick();">${isMuted ? '🔔 Aktifkan Notifikasi' : '🔕 Bisukan'}</button>
+    <button class="rc-quick-action" onclick="rcToggleArchiveFor('${uname}'); rcCloseContactQuick();">${isArch ? '🗄️ Keluarkan dari Arsip' : '🗄️ Arsipkan Chat'}</button>
+  `;
+  document.getElementById('rcContactQuickModal').classList.add('show');
+}
+function rcCloseContactQuick(){
+  document.getElementById('rcContactQuickModal').classList.remove('show');
+}
+function rcDismissPinHint(){
+  localStorage.setItem('talkup_pin_hint_seen', '1');
+  const hint = document.getElementById('rcPinHint');
+  if (hint) hint.style.display = 'none';
+}
+
+/* ── filter: semua / belum dibaca / favorit ── */
+let rcCurrentFilter = 'semua';
+function rcSetFilter(f){
+  rcCurrentFilter = f;
+  document.querySelectorAll('.rc-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  rcRenderUsers(rcAllUsers);
+}
+
+function rcIsUnread(u, preview, me){
+  if (!preview || preview.from.toLowerCase() === me) return false;
+  const lastSeen = parseInt(localStorage.getItem('rc_seen_' + u.username) || '0');
+  return preview.id > lastSeen;
+}
+function rcContactCard(u, preview, me, isPinned){
+  const unread = rcIsUnread(u, preview, me);
+  const nickname = rcGetNickname(u.username);
+  const displayName = nickname || u.username;
+  const hidePreview = !rcGetSetting('showPreview', true);
+  let subText;
+  if (preview) {
+    const prefix = preview.from.toLowerCase() === me ? 'Anda: ' : '';
+    subText = hidePreview ? '💬 Pesan baru' : rcEscHtml(prefix + preview.text);
+  } else {
+    subText = 'Ketuk untuk mulai chat · gabung ' + rcEscHtml(u.waktu_daftar||'');
+  }
+  const muted = rcIsMuted(u.username);
+  const rightHtml = `<div class="rc-contact-right">
+      ${preview ? `<div class="rc-contact-time">${rcFmtListTime(preview.time)}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:4px;">
+        ${muted ? '<span style="font-size:0.7rem;opacity:.6;">🔕</span>' : ''}
+        ${isPinned ? '<span class="rc-pin-icon">📌</span>' : (unread && !muted ? '<span class="rc-unread-dot"></span>' : '')}
+      </div>
+    </div>`;
+  const uname = u.username.replace(/'/g,"\\'");
+  return `
+    <div class="rc-contact ${unread?'unread':''}"
+      onclick="rcContactClick('${uname}')"
+      onmousedown="rcPressStart('${uname}')" onmouseup="rcPressEnd()" onmouseleave="rcPressEnd()"
+      ontouchstart="rcPressStart('${uname}')" ontouchend="rcPressEnd()" ontouchcancel="rcPressEnd()">
+      <div class="rc-avatar" onclick="event.stopPropagation(); rcOpenProfile('${uname}')" title="Lihat profil">${rcInitial(u.username)}</div>
+      <div class="rc-contact-info">
+        <div class="rc-contact-name">${rcEscHtml(displayName)}${rcIsContact(u.username)?' <span style="font-size:0.65rem;color:#2d6a4f;">👤</span>':''}</div>
+        <div class="rc-contact-sub">${subText}</div>
+      </div>
+      ${rightHtml}
+    </div>`;
+}
+function rcRenderUsers(users){
+  const me = currentUser ? currentUser.username.toLowerCase() : '';
+  const list = users.filter(u => u.username.toLowerCase() !== me);
+  const el = document.getElementById('rcUserList');
+  const previews   = rcGetPreviews();
+  const favorites  = rcGetFavorites();
+  const archived   = rcGetArchived();
+  const q = (document.getElementById('rcSearch').value || '').trim().toLowerCase();
+
+  const unreadBadge = document.getElementById('rcUnreadChipBadge');
+  const unreadCount = list.filter(u => !archived.includes(u.username) && rcIsUnread(u, previews[u.username], me)).length;
+  if (unreadBadge) { unreadBadge.textContent = unreadCount; unreadBadge.style.display = unreadCount ? '' : 'none'; }
+
+  const hint = document.getElementById('rcPinHint');
+  if (hint) hint.style.display = (!localStorage.getItem('talkup_pin_hint_seen') && list.length && !q) ? 'flex' : 'none';
+
+  /* 🔎 Jika sedang mencari username: cari di SEMUA pengguna (termasuk yang belum pernah diajak chat) */
+  if (q) {
+    const matches = list.filter(u => u.username.toLowerCase().includes(q) || (rcGetNickname(u.username)||'').toLowerCase().includes(q));
+    if (!matches.length) {
+      el.innerHTML = `<div class="rc-empty">🔍 Tidak ada pengguna dengan username "${rcEscHtml(q)}"</div>`;
+      return;
+    }
+    el.innerHTML = '<div class="rc-section-lbl">🔍 Hasil Pencarian Username</div>' +
+      matches.map(u => rcContactCard(u, previews[u.username], me, favorites.includes(u.username))).join('');
+    return;
+  }
+
+  let filtered = list.filter(u => !archived.includes(u.username));
+  if (rcCurrentFilter === 'unread')  filtered = filtered.filter(u => rcIsUnread(u, previews[u.username], me));
+  if (rcCurrentFilter === 'favorit') filtered = filtered.filter(u => favorites.includes(u.username));
+  if (rcCurrentFilter === 'kontak')  filtered = filtered.filter(u => rcIsContact(u.username));
+
+  if(!filtered.length){
+    el.innerHTML = `<div class="rc-empty">${rcCurrentFilter==='favorit' ? '⭐ Belum ada chat yang disematkan' : rcCurrentFilter==='kontak' ? '👤 Belum ada kontak tersimpan. Ketuk ➕ untuk menambah.' : rcCurrentFilter==='unread' ? '✅ Semua chat sudah dibaca' : '🔍 Ketik username di kolom pencarian untuk menemukan pengguna lain'}</div>`;
+    return;
+  }
+
+  const pinned = filtered.filter(u => favorites.includes(u.username));
+  const recent = filtered.filter(u => !favorites.includes(u.username) && previews[u.username]);
+  const byTime = (a,b) => rcParseWaktu((previews[b.username]||{}).time||'') - rcParseWaktu((previews[a.username]||{}).time||'');
+  pinned.sort(byTime);
+  recent.sort(byTime);
+
+  let html = '';
+  if (pinned.length) {
+    html += '<div class="rc-section-lbl">📌 Disematkan</div>';
+    html += pinned.map(u => rcContactCard(u, previews[u.username], me, true)).join('');
+  }
+  if (recent.length) {
+    html += '<div class="rc-section-lbl">Chat Terbaru</div>';
+    html += recent.map(u => rcContactCard(u, previews[u.username], me, false)).join('');
+  }
+  if (!pinned.length && !recent.length) {
+    html += '<div class="rc-empty">🔍 Ketik username di kolom pencarian untuk menemukan &amp; memulai chat baru</div>';
+  }
+  if (rcGetArchived().length) {
+    html += `<div class="rc-section-lbl" style="cursor:pointer;" onclick="rcOpenArchived()">🗄️ Chat Diarsipkan (${rcGetArchived().length}) ›</div>`;
+  }
+  el.innerHTML = html;
+}
+function rcShowContacts(){
+  rcCurrentTab = 'chat';
+  document.getElementById('rcContactsView').style.display = 'flex';
+  document.getElementById('rcChatView').style.display     = 'none';
+  document.getElementById('rcSettingsView').style.display = 'none';
+  document.getElementById('rcStatusView').style.display    = 'none';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcTopbarTitle').textContent    = 'TalkMe';
+  document.getElementById('rcTopbarSub').textContent      = 'Pilih teman untuk chat';
+  document.getElementById('rcTopbarAvatar').textContent   = '💬';
+  document.getElementById('rcBackBtn').onclick            = rcClose;
+  document.getElementById('rcTopbar').classList.add('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcBlockMenuBtn').style.display = 'none';
+  ['rcContactInfoBtn','rcContactToggleMenuBtn','rcMuteMenuBtn','rcArchiveMenuBtn','rcSelectModeBtn','rcExportMenuBtn','rcClearChatMenuBtn'].forEach(id=>{
+    const b = document.getElementById(id); if (b) b.style.display = 'none';
+  });
+  document.getElementById('rcContactInfoView').classList.remove('show');
+  document.getElementById('rcStarredView').classList.remove('show');
+  document.getElementById('rcArchivedView').classList.remove('show');
+  rcExitSelectMode();
+  document.querySelectorAll('.rc-nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'chat'));
+  rcCancelReply();
+  const sb = document.getElementById('rcSearchBar');
+  sb.style.display = 'none';
+  document.getElementById('rcChatSearchInput').value = '';
+  if (rcAllUsers.length) rcRenderUsers(rcAllUsers);
+}
+
+/* ── chat ── */
+function rcOpenChat(username){
+  rcActiveGroup = null;
+  rcChatUser = username;
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcChatView').style.display     = 'flex';
+  document.getElementById('rcTopbarTitle').textContent    = username;
+  const subEl = document.getElementById('rcTopbarSub');
+  subEl.textContent = 'TalkMe';
+  subEl.classList.remove('rc-online');
+  document.getElementById('rcTopbarAvatar').textContent   = rcInitial(username);
+  document.getElementById('rcBackBtn').onclick            = rcShowContacts;
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcSearchToggleBtn').style.display = '';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = '';
+  document.getElementById('rcMsgInput').value             = '';
+  rcRefreshBlockUI();
+  rcExitSelectMode();
+  ['rcContactInfoBtn','rcContactToggleMenuBtn','rcMuteMenuBtn','rcArchiveMenuBtn','rcSelectModeBtn','rcExportMenuBtn','rcClearChatMenuBtn'].forEach(id=>{
+    const b = document.getElementById(id); if (b) b.style.display = '';
+  });
+  rcSyncMenuContactBtn();
+  const emojiBar = document.getElementById('rcEmojiBar');
+  const emojiBtn = document.getElementById('rcEmojiToggle');
+  if (emojiBar) { emojiBar.classList.remove('show'); }
+  if (emojiBtn) { emojiBtn.classList.remove('active'); }
+  rcCancelReply();
+  const sb = document.getElementById('rcSearchBar');
+  sb.style.display = 'none';
+  document.getElementById('rcChatSearchInput').value = '';
+  rcLoadMessages(true);
+  clearInterval(rcRefTimer);
+  rcRefTimer = setInterval(()=>rcLoadMessages(false), 4000);
+}
+async function rcLoadMessages(scrollDown){
+  if (rcActiveGroup) { return rcLoadGroupMessages(scrollDown); }
+  if(!currentUser || !rcChatUser) return;
+  try{
+    const me    = encodeURIComponent(currentUser.username);
+    const other = encodeURIComponent(rcChatUser);
+    const res   = await fetch(GAS_URL + '?action=getRosesMessages&me=' + me + '&other=' + other);
+    const msgs  = await res.json();
+    rcProcessCallSignals(msgs);
+    rcRenderMessages(msgs, scrollDown);
+  } catch(e){ /* silent */ }
+}
+const RC_QUICK_REACTS = ['❤️','😂','😮','😢','👍','🙏'];
+
+function rcIsEventType(p){ return p.type === 'receipt' || p.type === 'reaction' || p.type === 'group_invite' || (typeof p.type === 'string' && p.type.indexOf('call_') === 0); }
+
+/* ══════════════════════════════════════════════════════
+   📞 PANGGILAN SUARA (WebRTC, sinyal lewat jalur pesan yang ada)
+   Catatan: sinyal (offer/answer/ice) numpang di mekanisme kirim &
+   polling pesan yang sudah ada (setiap ~4 detik), jadi proses
+   menyambungkan panggilan bisa makan waktu beberapa detik.
+   Hanya berfungsi untuk chat 1-lawan-1 yang sedang dibuka.
+══════════════════════════════════════════════════════ */
+const RC_ICE_SERVERS = [{ urls:'stun:stun.l.google.com:19302' }, { urls:'stun:stun1.l.google.com:19302' }];
+let rcCallState = null;
+let rcCallMuted = false;
+const rcHandledCallMsgIds = new Set();
+
+function rcCallEnvelope(type, extra){ return Object.assign({ type }, extra); }
+
+function rcProcessCallSignals(msgs){
+  if (!currentUser || !rcChatUser) return;
+  const me = currentUser.username.toLowerCase();
+  msgs.forEach(m => {
+    if (m.from.toLowerCase() === me) return;
+    if (rcHandledCallMsgIds.has(m.id)) return;
+    const p = rcParseEnvelope(m.teks);
+    if (typeof p.type !== 'string' || p.type.indexOf('call_') !== 0) return;
+    rcHandledCallMsgIds.add(m.id);
+    if (p.type === 'call_offer')  rcHandleIncomingOffer(m, p);
+    if (p.type === 'call_answer') rcHandleCallAnswer(p);
+    if (p.type === 'call_ice')    rcHandleCallIce(p);
+    if (p.type === 'call_end')    rcHandleCallEnd(p);
+    if (p.type === 'call_reject') rcHandleCallReject(p);
+  });
+}
+
+async function rcStartCall(){
+  if (!rcChatUser || rcCallState) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showPbToast('❌ Perangkat/browser tidak mendukung panggilan'); return; }
+  const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const pc = new RTCPeerConnection({ iceServers: RC_ICE_SERVERS });
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    rcCallState = { callId, role:'caller', pc, localStream:stream, target: rcChatUser, status:'calling', pendingIce:[] };
+    pc.onicecandidate = e => { if (e.candidate) rcSendRaw(rcChatUser, rcCallEnvelope('call_ice', { callId, candidate:e.candidate })); };
+    pc.ontrack = e => rcAttachRemoteAudio(e.streams[0]);
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') { rcCallState.status='connected'; rcShowCallUI('connected'); rcStartCallTimer(); } if (['disconnected','failed','closed'].includes(pc.connectionState)) rcEndCall(true); };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await rcSendRaw(rcChatUser, rcCallEnvelope('call_offer', { callId, sdp: offer }));
+    rcShowCallUI('calling');
+  } catch(e) {
+    showPbToast('❌ Tidak bisa mengakses mikrofon');
+    rcCallState = null;
+  }
+}
+
+function rcHandleIncomingOffer(m, p){
+  if (rcCallState) { rcSendRaw(m.from, rcCallEnvelope('call_reject', { callId:p.callId })); return; }
+  rcCallState = { callId:p.callId, role:'callee', pc:null, localStream:null, target:m.from, status:'ringing', remoteSdp:p.sdp, pendingIce:[] };
+  rcShowCallUI('ringing', m.from);
+  if (navigator.vibrate) navigator.vibrate([200,120,200]);
+}
+
+async function rcAcceptCall(){
+  if (!rcCallState || rcCallState.role !== 'callee') return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const pc = new RTCPeerConnection({ iceServers: RC_ICE_SERVERS });
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    pc.onicecandidate = e => { if (e.candidate) rcSendRaw(rcCallState.target, rcCallEnvelope('call_ice', { callId:rcCallState.callId, candidate:e.candidate })); };
+    pc.ontrack = e => rcAttachRemoteAudio(e.streams[0]);
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') { rcCallState.status='connected'; rcShowCallUI('connected'); rcStartCallTimer(); } if (['disconnected','failed','closed'].includes(pc.connectionState)) rcEndCall(true); };
+    await pc.setRemoteDescription(new RTCSessionDescription(rcCallState.remoteSdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    rcCallState.pc = pc; rcCallState.localStream = stream; rcCallState.status = 'connecting';
+    await rcSendRaw(rcCallState.target, rcCallEnvelope('call_answer', { callId:rcCallState.callId, sdp:answer }));
+    rcCallState.pendingIce.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{}));
+    rcCallState.pendingIce = [];
+    rcShowCallUI('connecting');
+  } catch(e) {
+    showPbToast('❌ Tidak bisa mengakses mikrofon');
+    rcDeclineCall();
+  }
+}
+
+function rcDeclineCall(){
+  if (!rcCallState) return;
+  rcSendRaw(rcCallState.target, rcCallEnvelope('call_reject', { callId:rcCallState.callId }));
+  rcCleanupCall();
+}
+
+async function rcHandleCallAnswer(p){
+  if (!rcCallState || rcCallState.callId !== p.callId || rcCallState.role !== 'caller') return;
+  await rcCallState.pc.setRemoteDescription(new RTCSessionDescription(p.sdp));
+  rcCallState.pendingIce.forEach(c => rcCallState.pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{}));
+  rcCallState.pendingIce = [];
+  rcCallState.status = 'connecting';
+  rcShowCallUI('connecting');
+}
+
+function rcHandleCallIce(p){
+  if (!rcCallState || rcCallState.callId !== p.callId) return;
+  if (!rcCallState.pc) { rcCallState.pendingIce.push(p.candidate); return; }
+  rcCallState.pc.addIceCandidate(new RTCIceCandidate(p.candidate)).catch(()=>{});
+}
+
+function rcHandleCallEnd(p){
+  if (!rcCallState || rcCallState.callId !== p.callId) return;
+  showPbToast('📞 Panggilan diakhiri');
+  rcCleanupCall();
+}
+function rcHandleCallReject(p){
+  if (!rcCallState || rcCallState.callId !== p.callId) return;
+  showPbToast('📵 Panggilan tidak dijawab / ditolak');
+  rcCleanupCall();
+}
+
+function rcEndCall(silent){
+  if (!rcCallState) return;
+  if (!silent) rcSendRaw(rcCallState.target, rcCallEnvelope('call_end', { callId:rcCallState.callId }));
+  rcCleanupCall();
+}
+
+function rcCleanupCall(){
+  if (rcCallState) {
+    if (rcCallState.pc) { try { rcCallState.pc.close(); } catch(e){} }
+    if (rcCallState.localStream) rcCallState.localStream.getTracks().forEach(t=>t.stop());
+    clearInterval(rcCallState.timerInt);
+  }
+  rcCallState = null;
+  rcCallMuted = false;
+  const ov = document.getElementById('rcCallOverlay');
+  if (ov) ov.classList.remove('show');
+  const ra = document.getElementById('rcRemoteAudio');
+  if (ra) ra.srcObject = null;
+}
+
+function rcAttachRemoteAudio(stream){
+  const el = document.getElementById('rcRemoteAudio');
+  if (el) el.srcObject = stream;
+}
+
+function rcStartCallTimer(){
+  const startTs = Date.now();
+  clearInterval(rcCallState.timerInt);
+  rcCallState.timerInt = setInterval(() => {
+    const el = document.getElementById('rcCallStatus');
+    if (!el) return;
+    const s = Math.floor((Date.now()-startTs)/1000);
+    el.textContent = _pad2(Math.floor(s/60)) + ':' + _pad2(s%60);
+  }, 1000);
+}
+
+function rcShowCallUI(status, fromUser){
+  const ov = document.getElementById('rcCallOverlay');
+  const name = fromUser || (rcCallState && rcCallState.target) || '';
+  document.getElementById('rcCallAvatar').textContent = rcInitial(name);
+  document.getElementById('rcCallName').textContent = rcGetNickname(name) || name;
+  const statusText = { calling:'Memanggil...', ringing:'Panggilan masuk...', connecting:'Menghubungkan...', connected:'00:00' };
+  document.getElementById('rcCallStatus').textContent = statusText[status] || '';
+  document.getElementById('rcCallAcceptBtn').style.display  = status === 'ringing' ? '' : 'none';
+  document.getElementById('rcCallDeclineBtn').style.display = status === 'ringing' ? '' : 'none';
+  document.getElementById('rcCallEndBtn').style.display     = status === 'ringing' ? 'none' : '';
+  document.getElementById('rcCallMuteBtn').style.display    = status === 'ringing' ? 'none' : '';
+  ov.classList.add('show');
+}
+
+function rcToggleCallMute(){
+  if (!rcCallState || !rcCallState.localStream) return;
+  rcCallMuted = !rcCallMuted;
+  rcCallState.localStream.getAudioTracks().forEach(t => t.enabled = !rcCallMuted);
+  const btn = document.getElementById('rcCallMuteBtn');
+  if (btn) btn.textContent = rcCallMuted ? '🔇' : '🎙️';
+}
+
+async function rcSendRaw(to, payload){
+  try{
+    await fetch(GAS_URL, {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'roses_send', from:currentUser.username, to, teks:JSON.stringify(payload), waktu:rcNow() })
+    });
+  } catch(e){ /* best-effort, silent */ }
+}
+
+function rcUpdateOnlineStatus(allMsgs){
+  const subEl = document.getElementById('rcTopbarSub');
+  if (!subEl || !rcChatUser) return;
+  if (!rcGetSetting('showLastSeen', true)) { subEl.textContent = 'TalkMe'; subEl.classList.remove('rc-online'); return; }
+  const fromOther = allMsgs.filter(m => m.from.toLowerCase() === rcChatUser.toLowerCase());
+  if (!fromOther.length) { subEl.textContent = 'TalkMe'; subEl.classList.remove('rc-online'); return; }
+  const last    = fromOther[fromOther.length - 1];
+  const lastMs  = rcParseWaktuMs(last.waktu);
+  const diffMin = (Date.now() - lastMs) / 60000;
+  if (lastMs && diffMin >= 0 && diffMin < 3) {
+    subEl.innerHTML = '<span class="rc-online-dot"></span>Online';
+    subEl.classList.add('rc-online');
+  } else {
+    subEl.textContent = 'Terakhir aktif ' + rcFmtTime(last.waktu);
+    subEl.classList.remove('rc-online');
+  }
+}
+
+function rcMaybeSendReadReceipt(visibleMsgs){
+  if (!rcChatUser) return;
+  if (!rcGetSetting('sendReadReceipts', true)) return;
+  const fromOther = visibleMsgs.filter(m => m.from.toLowerCase() === rcChatUser.toLowerCase());
+  if (!fromOther.length) return;
+  const maxId  = Math.max(...fromOther.map(m => m.id));
+  const key    = 'rc_receipt_sent_' + rcChatUser;
+  const alreadySent = parseInt(localStorage.getItem(key) || '0');
+  if (maxId > alreadySent) {
+    localStorage.setItem(key, maxId);
+    rcSendRaw(rcChatUser, { type:'receipt', upto: maxId });
+  }
+}
+
+function rcToggleReactPicker(id){
+  document.querySelectorAll('.rc-react-picker.show').forEach(p=>{
+    if (p.id !== 'rcreact-' + id) p.classList.remove('show');
+  });
+  const p = document.getElementById('rcreact-' + id);
+  if (p) p.classList.toggle('show');
+}
+async function rcSendReaction(id, emoji){
+  const picker = document.getElementById('rcreact-' + id);
+  if (picker) picker.classList.remove('show');
+  if (!rcChatUser) return;
+  await rcSendRaw(rcChatUser, { type:'reaction', target:id, emoji });
+  rcLoadMessages(false);
+}
+document.addEventListener('click', (e)=>{
+  if (!e.target.closest('.rc-react-btn')) {
+    document.querySelectorAll('.rc-react-picker.show').forEach(p=>p.classList.remove('show'));
+  }
+});
+
+let rcLastRenderSig = null;
+function rcMsgsSignature(msgs){
+  const stars  = rcGetStarred().join(',');
+  const hidden = rcGetHiddenForMe().join(',');
+  const dis    = rcIsDisappearing(rcChatUser) ? '1' : '0';
+  return msgs.map(m => m.id + '~' + m.teks).join('|') + '::' + stars + '::' + hidden + '::' + dis;
+}
+function rcRenderMessages(msgs, scrollDown){
+  // hindari render ulang (dan animasi ulang / efek "geter-geter") kalau tidak ada perubahan sama sekali
+  const sig = rcMsgsSignature(msgs);
+  if (!scrollDown && sig === rcLastRenderSig && !rcSelectMode) {
+    rcMsgsCache = msgs;
+    rcUpdateOnlineStatus(msgs);
+    return;
+  }
+  rcLastRenderSig = sig;
+  rcMsgsCache = msgs;
+  const area = document.getElementById('rcMessages');
+  const me   = currentUser.username.toLowerCase();
+
+  const hiddenForMe = rcGetHiddenForMe();
+  const disappearOn = rcIsDisappearing(rcChatUser);
+  const dayMs = 24 * 60 * 60 * 1000;
+  // simpan otomatis grup/saluran yang baru diundangkan lewat kanal ini
+  msgs.forEach(m => { const p = rcParseEnvelope(m.teks); if (p.type === 'group_invite' && p.group) rcSaveGroupLocal(p.group); });
+  let visibleMsgs = msgs.filter(m => { const p = rcParseEnvelope(m.teks); return !rcIsEventType(p) && !p.groupId && !hiddenForMe.includes(m.id); });
+  if (disappearOn) {
+    visibleMsgs = visibleMsgs.filter(m => (Date.now() - rcParseWaktuMs(m.waktu)) < dayMs);
+  }
+
+  if (!scrollDown) {
+    const newMsgs = visibleMsgs.filter(m => m.from.toLowerCase() !== me);
+    const lastSeenKey = 'rc_seen_' + rcChatUser;
+    const lastSeen = parseInt(localStorage.getItem(lastSeenKey) || '0');
+    const latestId = newMsgs.length ? Math.max(...newMsgs.map(m=>m.id)) : 0;
+    if (latestId > lastSeen && newMsgs.length) {
+      playNotifSound();
+    }
+  }
+  const fromOther = visibleMsgs.filter(m => m.from.toLowerCase() !== me);
+  if (fromOther.length) {
+    const latestId = Math.max(...fromOther.map(m=>m.id));
+    localStorage.setItem('rc_seen_' + rcChatUser, latestId);
+  }
+
+  /* centang baca: cari sampai id mana lawan bicara sudah membaca pesan kita */
+  const receiptsFromOther = msgs.filter(m => {
+    const p = rcParseEnvelope(m.teks);
+    return p.type === 'receipt' && m.from.toLowerCase() === rcChatUser.toLowerCase();
+  });
+  const readUpto = receiptsFromOther.length
+    ? Math.max(...receiptsFromOther.map(m => rcParseEnvelope(m.teks).upto || 0)) : 0;
+
+  /* reaksi emoji per pesan */
+  const reactions = {};
+  msgs.forEach(m => {
+    const p = rcParseEnvelope(m.teks);
+    if (p.type === 'reaction' && p.target) reactions[p.target] = { emoji: p.emoji, from: m.from };
+  });
+
+  if(!visibleMsgs.length){
+    area.innerHTML='<div class="rc-no-msg">💬 Belum ada pesan.<br>Mulai percakapan!</div>';
+  } else {
+    let lastDayKey = null;
+    area.innerHTML = visibleMsgs.map(m=>{
+      const parsed  = rcParseEnvelope(m.teks);
+      const isSent  = m.from.toLowerCase() === me;
+      const canAct  = isSent && rcCanEdit(m.waktu);
+      const remaining = canAct ? rcGetRemaining(m.waktu) : 0;
+      const countdownHtml = canAct
+        ? `<span class="rc-countdown" id="rccountdown-${m.id}">⏱ ${rcFmtRemaining(remaining)}</span>` : '';
+      const replyQuote = parsed.reply
+        ? `<div class="rc-reply-quote">↩ <b>${rcEscHtml(parsed.reply.from)}</b>: ${rcEscHtml(parsed.reply.snippet)}</div>` : '';
+
+      const msgMs = rcParseWaktuMs(m.waktu);
+      let daySepHtml = '';
+      if (msgMs) {
+        const dk = rcDayKeyOf(msgMs);
+        if (dk !== lastDayKey) { daySepHtml = `<div class="rc-day-sep"><span>${rcDayLabel(msgMs)}</span></div>`; lastDayKey = dk; }
+      }
+
+      let bodyHtml, searchText;
+      if (parsed.type === 'image') {
+        const src = String(parsed.src||'');
+        bodyHtml = `<img src="${src}" class="rc-msg-img" onclick="rcOpenLightbox('${src.replace(/'/g,"\\'")}')">`;
+        searchText = 'gambar foto';
+      } else {
+        bodyHtml = `<span id="rcteks-${m.id}">${rcEscHtml(parsed.text||'')}</span>`;
+        searchText = (parsed.text||'').toLowerCase();
+      }
+
+      const ticksHtml = isSent
+        ? `<span class="rc-ticks ${m.id <= readUpto ? 'read' : 'delivered'}">✓✓</span>` : '';
+
+      const reaction = reactions[m.id];
+      const reactionHtml = reaction ? `<div class="rc-reaction-badge">${reaction.emoji}</div>` : '';
+
+      const reactPicker = `<div class="rc-react-picker" id="rcreact-${m.id}">${RC_QUICK_REACTS.map(e=>`<button onclick="rcSendReaction(${m.id},'${e}')">${e}</button>`).join('')}</div>`;
+      const reactBtn = `<span class="rc-react-btn"><button class="rc-msg-btn" onclick="rcToggleReactPicker(${m.id})">😊</button>${reactPicker}</span>`;
+      const replyBtn = `<button class="rc-msg-btn" onclick="rcReplyTo(${m.id})">↩ Balas</button>`;
+      const editBtn  = (canAct && parsed.type === 'text') ? `<button class="rc-msg-btn" onclick="rcStartEdit(${m.id})">✏️ Edit</button>` : '';
+      const delBtn   = `<button class="rc-msg-btn" onclick="rcDeleteMsg(${m.id}, ${isSent}, ${canAct})">🗑️</button>`;
+      const isStarred = rcGetStarred().includes(m.id);
+      const starBtn  = `<button class="rc-msg-btn" onclick="rcToggleStar(${m.id})">${isStarred?'⭐':'☆'}</button>`;
+      const copyBtn  = parsed.type === 'text' ? `<button class="rc-msg-btn" onclick="rcCopyMsg(${m.id})">📋</button>` : '';
+      const fwdBtn   = `<button class="rc-msg-btn" onclick="rcForwardMsg(${m.id})">↪</button>`;
+      const actBtns  = `<div class="rc-msg-actions">${countdownHtml}${replyBtn}${reactBtn}${starBtn}${copyBtn}${fwdBtn}${editBtn}${delBtn}</div>`;
+
+      return `${daySepHtml}<div class="rc-bwrap ${isSent?'sent':'received'}" id="rcmsg-${m.id}" data-id="${m.id}" data-search="${rcEscHtml(searchText)}" onclick="rcSelectModeClick(${m.id}, event)">
+        <div class="rc-msg-outer">
+          <div style="position:relative;">
+            <div class="rc-bubble ${isSent?'sent':'received'} ${parsed.type==='image'?'rc-bubble-img':''}" id="rcbubble-${m.id}">
+              ${replyQuote}
+              ${bodyHtml}
+              <div class="rc-btime">${rcFmtTime(m.waktu)} ${ticksHtml} ${isStarred?'<span class="rc-star-badge">⭐</span>':''}</div>
+            </div>
+            ${reactionHtml}
+          </div>
+          ${actBtns}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  if(scrollDown || (area.scrollHeight - area.scrollTop - area.clientHeight < 120)){
+    area.scrollTop = area.scrollHeight;
+  }
+  rcStartCountdownUpdater();
+  rcFilterMessages();
+
+  if (visibleMsgs.length) {
+    const last = visibleMsgs[visibleMsgs.length - 1];
+    const lp = rcParseEnvelope(last.teks);
+    const previewText = lp.type === 'image' ? '📷 Foto' : (lp.text || '');
+    rcSavePreview(rcChatUser, { text: previewText.slice(0,40), time: last.waktu, id: last.id, from: last.from });
+  }
+  rcUpdateOnlineStatus(msgs);
+  rcMaybeSendReadReceipt(visibleMsgs);
+}
+
+/* ── unified send (text / image, with optional reply) ── */
+async function rcSendPayload(payload){
+  if(!currentUser || !rcChatUser) return;
+  if (rcReplyTarget) payload.reply = rcReplyTarget;
+  try{
+    await fetch(GAS_URL, {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'roses_send', from:currentUser.username, to:rcChatUser, teks:JSON.stringify(payload), waktu:rcNow() })
+    });
+    rcCancelReply();
+    rcLoadMessages(true);
+  } catch(e){
+    showPbToast('❌ Gagal mengirim!');
+    throw e;
+  }
+}
+
+async function rcSend(){
+  if (rcActiveGroup) { return rcSendGroupMsg(); }
+  const input = document.getElementById('rcMsgInput');
+  const teks  = input.value.trim();
+  if(!teks || !currentUser || !rcChatUser) return;
+  if (rcIsBlocked(rcChatUser)) { showPbToast('🚫 Buka blokir dulu untuk mengirim pesan ke pengguna ini.'); return; }
+  const btn = document.getElementById('rcSendBtn');
+  btn.disabled = true;
+  input.value  = '';
+  input.style.height = 'auto';
+  try{
+    await rcSendPayload({ type:'text', text:teks });
+  } catch(e){
+    input.value = teks;
+  }
+  btn.disabled = false;
+}
+function rcAutoResize(el){
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+}
+function rcHandleKey(e){
+  if(e.key==='Enter' && !e.shiftKey && rcGetSetting('enterSend', true)){ e.preventDefault(); rcSend(); }
+}
+
+/* ── 📷 KIRIM GAMBAR — compress client-side then send as data URL ── */
+function rcCompressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const maxDim = 900;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale); h = Math.round(h * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        let quality = 0.72;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let tries = 0;
+        while (dataUrl.length > 60000 && quality > 0.3 && tries < 6) {
+          quality -= 0.12;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          tries++;
+        }
+        tries = 0;
+        while (dataUrl.length > 60000 && tries < 4) {
+          w = Math.round(w * 0.8); h = Math.round(h * 0.8);
+          canvas.width = w; canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+          dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+          tries++;
+        }
+        resolve(dataUrl.length > 60000 ? null : dataUrl);
+      };
+      img.onerror = () => reject(new Error('img load failed'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function rcHandleImageSelect(e){
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showPbToast('⚠️ File harus berupa gambar!'); return; }
+  if (!currentUser || !rcChatUser) return;
+  showPbToast('📤 Memproses gambar...');
+  const imgBtn = document.getElementById('rcImgToggleBtn');
+  if (imgBtn) imgBtn.disabled = true;
+  try{
+    const dataUrl = await rcCompressImage(file);
+    if (!dataUrl) { showPbToast('⚠️ Gambar terlalu besar, coba gambar lain.'); return; }
+    await rcSendPayload({ type:'image', src:dataUrl });
+  } catch(err){
+    showPbToast('❌ Gagal memproses gambar!');
+  } finally {
+    if (imgBtn) imgBtn.disabled = false;
+  }
+}
+
+/* ── 🖼️ LIGHTBOX ── */
+function rcOpenLightbox(src){
+  document.getElementById('rcLightboxImg').src = src;
+  document.getElementById('rcLightbox').classList.add('show');
+}
+function rcCloseLightbox(e){
+  if (e) e.stopPropagation();
+  document.getElementById('rcLightbox').classList.remove('show');
+}
+
+/* ── ↩ BALAS PESAN ── */
+function rcReplyTo(id){
+  const msg = rcMsgsCache.find(m => m.id === id);
+  if (!msg) return;
+  const parsed = rcParseEnvelope(msg.teks);
+  const snippet = parsed.type === 'image' ? '📷 Gambar' : (parsed.text||'').slice(0,60);
+  rcReplyTarget = { from: msg.from, snippet };
+  document.getElementById('rcReplyFrom').textContent    = msg.from;
+  document.getElementById('rcReplySnippet').textContent = snippet;
+  document.getElementById('rcReplyBar').style.display   = 'flex';
+  document.getElementById('rcMsgInput').focus();
+}
+function rcCancelReply(){
+  rcReplyTarget = null;
+  const bar = document.getElementById('rcReplyBar');
+  if (bar) bar.style.display = 'none';
+}
+
+/* ── 🔍 CARI DI PERCAKAPAN ── */
+function rcToggleSearch(){
+  const bar = document.getElementById('rcSearchBar');
+  const isShown = bar.style.display === 'flex';
+  if (isShown) {
+    bar.style.display = 'none';
+    document.getElementById('rcChatSearchInput').value = '';
+    rcFilterMessages();
+  } else {
+    bar.style.display = 'flex';
+    document.getElementById('rcChatSearchInput').focus();
+  }
+}
+function rcFilterMessages(){
+  const q = (document.getElementById('rcChatSearchInput').value || '').trim().toLowerCase();
+  document.querySelectorAll('#rcMessages .rc-bwrap').forEach(el=>{
+    const t = el.getAttribute('data-search') || '';
+    el.style.display = (!q || t.includes(q)) ? '' : 'none';
+  });
+}
+
+/* ── 15-menit window check ── */
+const _RC_MON = {Jan:0,Feb:1,Mar:2,Apr:3,Mei:4,Jun:5,Jul:6,Agu:7,Sep:8,Okt:9,Nov:10,Des:11};
+function rcParseWaktu(s) {
+  if (!s) return 0;
+  const m = s.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{2}):(\d{2})/);
+  if (!m) return 0;
+  const mon = _RC_MON[m[2]];
+  if (mon === undefined) return 0;
+  return Date.UTC(parseInt(m[3]), mon, parseInt(m[1]), parseInt(m[4]), parseInt(m[5]));
+}
+function rcCanEdit(waktu) {
+  const msgTs = rcParseWaktu(waktu);
+  if (!msgTs) return false;
+  const w     = _wibDate();
+  const nowTs = Date.UTC(w.getFullYear(), w.getMonth(), w.getDate(), w.getHours(), w.getMinutes());
+  return (nowTs - msgTs) < 15 * 60 * 1000;
+}
+
+/* ── Edit pesan (teks saja) ── */
+function rcStartEdit(id) {
+  const msg = rcMsgsCache.find(m => m.id === id);
+  if (!msg) return;
+  const parsed = rcParseEnvelope(msg.teks);
+  if (parsed.type !== 'text') return;
+  const msgEl    = document.getElementById('rcmsg-' + id);
+  const bubbleEl = document.getElementById('rcbubble-' + id);
+  if (!msgEl || !bubbleEl) return;
+  if (document.getElementById('rcedit-' + id)) return;
+  bubbleEl.style.display = 'none';
+  const actEl = msgEl.querySelector('.rc-msg-actions');
+  if (actEl) actEl.style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.className = 'rc-edit-wrap';
+  wrap.id = 'rcedit-' + id;
+  wrap.innerHTML = `
+    <textarea class="rc-edit-area" id="rcedittxt-${id}" rows="2">${rcEscHtml(parsed.text||'')}</textarea>
+    <div class="rc-edit-footer">
+      <button class="rc-edit-cancel" onclick="rcCancelEdit(${id})">Batal</button>
+      <button class="rc-edit-save" id="rceditsave-${id}" onclick="rcSaveEdit(${id})">💾 Simpan</button>
+    </div>`;
+  msgEl.querySelector('.rc-msg-outer').appendChild(wrap);
+  const ta = document.getElementById('rcedittxt-' + id);
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+function rcCancelEdit(id) {
+  const editEl   = document.getElementById('rcedit-' + id);
+  if (editEl) editEl.remove();
+  const bubbleEl = document.getElementById('rcbubble-' + id);
+  if (bubbleEl) bubbleEl.style.display = '';
+  const msgEl = document.getElementById('rcmsg-' + id);
+  if (msgEl) { const a = msgEl.querySelector('.rc-msg-actions'); if(a) a.style.display=''; }
+}
+async function rcSaveEdit(id) {
+  const ta = document.getElementById('rcedittxt-' + id);
+  if (!ta) return;
+  const newTeks = ta.value.trim();
+  if (!newTeks) { showPbToast('⚠️ Pesan tidak boleh kosong!'); return; }
+  const saveBtn = document.getElementById('rceditsave-' + id);
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳'; }
+  const orig   = rcMsgsCache.find(m => m.id === id);
+  const parsed = orig ? rcParseEnvelope(orig.teks) : { type:'text', reply:null };
+  const payload = JSON.stringify({ type:'text', text:newTeks, reply: parsed.reply || null });
+  try {
+    await fetch(GAS_URL, {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'roses_edit', id, from:currentUser.username, teks:payload })
+    });
+    const idx = rcMsgsCache.findIndex(m => m.id === id);
+    if (idx !== -1) rcMsgsCache[idx].teks = payload;
+    const teksEl = document.getElementById('rcteks-' + id);
+    if (teksEl) teksEl.textContent = newTeks;
+    rcCancelEdit(id);
+    showPbToast('✅ Pesan berhasil diedit~');
+  } catch(e) {
+    showPbToast('❌ Gagal edit pesan!');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Simpan'; }
+  }
+}
+
+/* ── Hapus pesan (untuk saya / untuk semua orang) ── */
+async function rcDeleteMsg(id, isSent, canDeleteForEveryone) {
+  // pesan sendiri & masih dalam jendela waktu → tawarkan hapus untuk semua orang
+  if (isSent && canDeleteForEveryone) {
+    if (confirm('🗑️ Hapus untuk semua orang?\n\nOK = Hapus untuk Semua Orang\nBatal = pilihan lain')) {
+      try {
+        await fetch(GAS_URL, {
+          method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'roses_delete', id, from:currentUser.username })
+        });
+        rcMsgsCache = rcMsgsCache.filter(m => m.id !== id);
+        const el = document.getElementById('rcmsg-' + id);
+        if (el) el.remove();
+        showPbToast('🗑️ Pesan dihapus untuk semua orang');
+      } catch(e) {
+        showPbToast('❌ Gagal hapus pesan!');
+      }
+      return;
+    }
+    if (!confirm('🗑️ Hapus untuk saya saja?')) return;
+    rcHideForMe([id]);
+    const el = document.getElementById('rcmsg-' + id);
+    if (el) el.remove();
+    showPbToast('🗑️ Pesan dihapus untuk saya');
+    return;
+  }
+  // pesan orang lain, atau pesan sendiri yang sudah lewat jendela waktu → hapus untuk saya saja
+  if (!confirm('🗑️ Hapus pesan ini untuk saya?')) return;
+  rcHideForMe([id]);
+  const el = document.getElementById('rcmsg-' + id);
+  if (el) el.remove();
+  showPbToast('🗑️ Pesan dihapus untuk saya');
+}
+
+/* ── notif sound ── */
+function playNotifSound() {
+  if (!rcGetSetting('notifSound', true)) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+    osc.type  = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc2.type = 'sine'; osc2.frequency.setValueAtTime(1100, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0, ctx.currentTime + 0.18);
+    gain.gain.linearRampToValueAtTime(0.1,  ctx.currentTime + 0.20);
+    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);  osc.stop(ctx.currentTime + 0.2);
+    osc2.start(ctx.currentTime + 0.12); osc2.stop(ctx.currentTime + 0.4);
+  } catch(e) { /* silent */ }
+}
+
+/* ── countdown updater ── */
+let _rcCountdownTimer = null;
+function rcGetRemaining(waktu) {
+  const sent = rcParseWaktuMs(waktu);
+  if (!sent) return 0;
+  const elapsed = Date.now() - sent;
+  return Math.max(0, 15 * 60 * 1000 - elapsed);
+}
+function rcParseWaktuMs(s) {
+  if (!s) return 0;
+  const m = s.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{2}):(\d{2})/);
+  if (!m) return 0;
+  const mon = _RC_MON[m[2]];
+  if (mon === undefined) return 0;
+  return Date.UTC(parseInt(m[3]), mon, parseInt(m[1]), parseInt(m[4]) - 7, parseInt(m[5]));
+}
+function rcFmtRemaining(ms) {
+  const totalSec = Math.ceil(ms / 1000);
+  if (totalSec <= 0) return '0:00';
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return min + ':' + String(sec).padStart(2, '0');
+}
+function rcStartCountdownUpdater() {
+  if (_rcCountdownTimer) clearInterval(_rcCountdownTimer);
+  _rcCountdownTimer = setInterval(() => {
+    if (!rcMsgsCache.length) return;
+    const me = currentUser ? currentUser.username.toLowerCase() : '';
+    rcMsgsCache.forEach(m => {
+      if (m.from.toLowerCase() !== me) return;
+      const el = document.getElementById('rccountdown-' + m.id);
+      if (!el) return;
+      const rem = rcGetRemaining(m.waktu);
+      if (rem <= 0) {
+        const msgEl = document.getElementById('rcmsg-' + m.id);
+        if (msgEl) { const acts = msgEl.querySelector('.rc-msg-actions'); if(acts) acts.remove(); }
+        clearInterval(_rcCountdownTimer);
+      } else {
+        el.textContent = '⏱ ' + rcFmtRemaining(rem);
+      }
+    });
+  }, 1000);
+}
+
+/* ── emoji picker ── */
+const RC_EMOJIS = [
+  '❤️','💕','💗','💖','😊','😍','🥰','😘',
+  '😂','😭','🥺','😅','✨','🔥','👍','🙏',
+  '💪','🎉','🫶','🤗','😏','😤','🤔','😶',
+  '🙂','😢','😩','🥳','💌','📌','🌟','⭐',
+  '💫','🌙','☀️','🎀','👏','🤝','😴','🙌'
+];
+function rcInitEmojiBar() {
+  const bar = document.getElementById('rcEmojiBar');
+  if (!bar || bar.children.length) return;
+  bar.innerHTML = RC_EMOJIS.map(e =>
+    `<button class="rc-emoji-btn" onclick="rcInsertEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+function rcToggleEmoji() {
+  const bar = document.getElementById('rcEmojiBar');
+  const btn = document.getElementById('rcEmojiToggle');
+  if (!bar) return;
+  rcInitEmojiBar();
+  const isShow = bar.classList.toggle('show');
+  if (btn) btn.classList.toggle('active', isShow);
+}
+function rcInsertEmoji(emoji) {
+  const ta = document.getElementById('rcMsgInput');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  ta.value = val.slice(0, start) + emoji + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + emoji.length;
+  ta.focus();
+  rcAutoResize(ta);
+}
+
+/* ══════════════════════════════════════════════════════
+   🌙 DARK MODE
+══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   ⋮ MENU DROPDOWN & BOTTOM NAV
+══════════════════════════════════════════════════════ */
+function rcToggleMenu(){
+  document.getElementById('rcMenuDropdown').classList.toggle('show');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.rc-menu-wrap')) {
+    document.getElementById('rcMenuDropdown').classList.remove('show');
+  }
+});
+let rcCurrentTab = 'chat';
+function rcNavTab(tab, el){
+  if (tab === 'chat') { rcShowContacts(); return; }
+  if (tab === 'update') { rcShowStatusView(); return; }
+  if (tab === 'community') { rcShowCommunity(); return; }
+  document.querySelectorAll('.rc-nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === rcCurrentTab));
+  const label = el.querySelector('span:last-child').textContent;
+  showPbToast('🚧 Fitur "' + label + '" akan segera hadir di TalkMe!');
+}
+
+/* ══════════════════════════════════════════════════════
+   👤 KONTAK: tambah / batalkan / lihat profil
+   Disimpan lokal per akun (talkup_contacts_<username>) —
+   daftar kontak pribadi untuk menandai siapa yang sudah
+   Anda simpan, terpisah dari daftar semua pengguna.
+══════════════════════════════════════════════════════ */
+function rcContactsKey(){ return 'talkup_contacts_' + (currentUser ? currentUser.username : ''); }
+function rcGetContacts(){ try{ return JSON.parse(localStorage.getItem(rcContactsKey()) || '[]'); } catch(e){ return []; } }
+function rcIsContact(username){ return rcGetContacts().map(c=>c.toLowerCase()).includes((username||'').toLowerCase()); }
+function rcAddContact(username){
+  if (!username || username.toLowerCase() === currentUser.username.toLowerCase()) return;
+  const list = rcGetContacts();
+  if (!rcIsContact(username)) { list.push(username); localStorage.setItem(rcContactsKey(), JSON.stringify(list)); }
+  showPbToast('✅ ' + username + ' ditambahkan ke kontak');
+  rcRenderUsers(rcAllUsers);
+}
+function rcRemoveContact(username){
+  const list = rcGetContacts().filter(c => c.toLowerCase() !== (username||'').toLowerCase());
+  localStorage.setItem(rcContactsKey(), JSON.stringify(list));
+  showPbToast('🗑️ ' + username + ' dihapus dari kontak');
+  rcRenderUsers(rcAllUsers);
+}
+function rcToggleContactCurrent(){
+  if (!rcChatUser) return;
+  if (rcIsContact(rcChatUser)) rcRemoveContact(rcChatUser); else rcAddContact(rcChatUser);
+  rcSyncContactInfoUI();
+}
+
+function rcOpenAddContact(){
+  document.getElementById('rcAddContactInput').value = '';
+  document.getElementById('rcAddContactModal').classList.add('show');
+  rcRenderAddContactResults();
+}
+function rcCloseAddContact(){ document.getElementById('rcAddContactModal').classList.remove('show'); }
+function rcRenderAddContactResults(){
+  const q = document.getElementById('rcAddContactInput').value.trim().toLowerCase();
+  const me = currentUser ? currentUser.username.toLowerCase() : '';
+  let users = rcAllUsers.filter(u => u.username.toLowerCase() !== me);
+  if (q) users = users.filter(u => u.username.toLowerCase().includes(q));
+  const el = document.getElementById('rcAddContactResults');
+  if (!users.length) { el.innerHTML = '<div class="rc-empty">🔍 Tidak ada pengguna ditemukan</div>'; return; }
+  el.innerHTML = users.map(u => {
+    const uname = u.username.replace(/'/g,"\\'");
+    const added = rcIsContact(u.username);
+    return `<div class="rc-group-card">
+      <div class="rc-group-avatar">${rcInitial(u.username)}</div>
+      <div class="rc-group-info"><div class="rc-group-name">${rcEscHtml(u.username)}</div></div>
+      <button class="rc-contact-add-btn ${added?'added':''}" onclick="event.stopPropagation(); ${added? `rcRemoveContact('${uname}')` : `rcAddContact('${uname}')`}; rcRenderAddContactResults();">
+        ${added ? '✕ Batalkan' : '➕ Tambah'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+/* Lihat profil pengguna lain langsung dari daftar kontak, tanpa perlu buka chat dulu */
+function rcOpenProfile(username){
+  rcChatUser = username;
+  rcOpenContactInfo();
+  document.getElementById('rcBackBtn').onclick = () => { document.getElementById('rcContactInfoView').classList.remove('show'); rcChatUser = null; rcShowContacts(); };
+}
+
+/* ══════════════════════════════════════════════════════
+   👥 GRUP & SALURAN (Komunitas)
+   Backend TalkMe saat ini hanya mendukung pesan 1 lawan 1
+   (getRosesMessages / roses_send), jadi grup diemulasikan:
+   - metadata grup disebar (fan-out) sebagai pesan khusus
+     "group_invite" ke tiap anggota lewat kanal 1:1 yang ada,
+     sehingga otomatis tersimpan begitu anggota membuka
+     percakapan dengan pembuat grup.
+   - pesan grup dikirim fan-out ke semua anggota lain,
+     ditandai groupId, lalu ruang obrolan grup menggabungkan
+     pesan dari semua thread 1:1 dengan anggota yang match.
+══════════════════════════════════════════════════════ */
+function rcGroupsKey(){ return 'talkup_groups_' + (currentUser ? currentUser.username : ''); }
+function rcGetGroups(){ try{ return JSON.parse(localStorage.getItem(rcGroupsKey()) || '[]'); } catch(e){ return []; } }
+function rcSaveGroupLocal(g){
+  const list = rcGetGroups().filter(x => x.id !== g.id);
+  list.push(g);
+  localStorage.setItem(rcGroupsKey(), JSON.stringify(list));
+}
+function rcGetGroup(id){ return rcGetGroups().find(g => g.id === id); }
+
+let rcGroupCreateType = 'group';
+function rcOpenGroupCreate(type){
+  rcGroupCreateType = type;
+  document.getElementById('rcGroupCreateTitle').textContent = type === 'channel' ? '📢 Buat Saluran' : '👥 Buat Grup';
+  document.getElementById('rcGroupNameInput').value = '';
+  document.getElementById('rcGroupNameInput').placeholder = type === 'channel' ? 'Nama saluran...' : 'Nama grup...';
+  rcRenderGroupMemberList();
+  document.getElementById('rcGroupCreateModal').classList.add('show');
+}
+function rcCloseGroupCreate(){ document.getElementById('rcGroupCreateModal').classList.remove('show'); }
+function rcRenderGroupMemberList(){
+  const me = currentUser ? currentUser.username.toLowerCase() : '';
+  const users = rcAllUsers.filter(u => u.username.toLowerCase() !== me);
+  const el = document.getElementById('rcGroupMemberList');
+  if (!users.length) { el.innerHTML = '<div class="rc-empty">Belum ada pengguna lain</div>'; return; }
+  el.innerHTML = users.map(u => {
+    const uid = 'gm_' + u.username.replace(/[^a-zA-Z0-9]/g,'_');
+    return `<label class="rc-member-row" for="${uid}">
+      <input type="checkbox" id="${uid}" value="${rcEscHtml(u.username)}">
+      <div class="rc-group-avatar" style="width:34px;height:34px;font-size:0.85rem;">${rcInitial(u.username)}</div>
+      <span>${rcEscHtml(u.username)}</span>
+    </label>`;
+  }).join('');
+}
+async function rcConfirmCreateGroup(){
+  const name = document.getElementById('rcGroupNameInput').value.trim();
+  if (!name) { showPbToast('⚠️ Isi nama grup/saluran dulu'); return; }
+  const checked = Array.from(document.querySelectorAll('#rcGroupMemberList input[type=checkbox]:checked')).map(c => c.value);
+  if (!checked.length) { showPbToast('⚠️ Pilih minimal 1 anggota'); return; }
+  const group = {
+    id: 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    name, type: rcGroupCreateType,
+    owner: currentUser.username,
+    members: Array.from(new Set([currentUser.username, ...checked]))
+  };
+  rcSaveGroupLocal(group);
+  // sebarkan undangan ke tiap anggota lewat kanal 1:1 yang sudah ada
+  for (const member of checked) {
+    await rcSendRaw(member, { type:'group_invite', group });
+  }
+  document.getElementById('rcGroupCreateModal').classList.remove('show');
+  showPbToast('✅ ' + (rcGroupCreateType==='channel'?'Saluran':'Grup') + ' "' + name + '" dibuat');
+  rcRenderGroupList();
+  rcOpenGroup(group.id);
+}
+
+function rcShowCommunity(){
+  rcCurrentTab = 'community';
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display     = 'none';
+  document.getElementById('rcSettingsView').style.display = 'none';
+  document.getElementById('rcStatusView').style.display    = 'none';
+  document.getElementById('rcCommunityView').style.display = 'flex';
+  document.getElementById('rcTopbarTitle').textContent    = 'Komunitas';
+  document.getElementById('rcTopbarSub').textContent      = 'Grup & saluran kamu';
+  document.getElementById('rcTopbarAvatar').textContent   = '👥';
+  document.getElementById('rcBackBtn').onclick            = rcClose;
+  document.getElementById('rcTopbar').classList.add('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.querySelectorAll('.rc-nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'community'));
+  clearInterval(rcRefTimer);
+  rcActiveGroup = null;
+  rcRenderGroupList();
+}
+function rcRenderGroupList(){
+  const groups = rcGetGroups();
+  const el = document.getElementById('rcGroupList');
+  if (!groups.length) { el.innerHTML = '<div class="rc-empty">👥 Belum ada grup atau saluran.<br>Ketuk tombol + untuk membuat baru.</div>'; return; }
+  el.innerHTML = groups.map(g => {
+    const icon = g.type === 'channel' ? '📢' : '👥';
+    return `<div class="rc-group-card" onclick="rcOpenGroup('${g.id}')">
+      <div class="rc-group-avatar">${icon}</div>
+      <div class="rc-group-info">
+        <div class="rc-group-name">${rcEscHtml(g.name)}</div>
+        <div class="rc-group-sub">${g.type==='channel'?'Saluran':'Grup'} · ${g.members.length} anggota</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rcOpenGroup(id){
+  const group = rcGetGroup(id);
+  if (!group) return;
+  rcActiveGroup = group;
+  rcChatUser = null;
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcContactsView').style.display  = 'none';
+  document.getElementById('rcChatView').style.display      = 'flex';
+  document.getElementById('rcTopbarTitle').textContent     = group.name;
+  document.getElementById('rcTopbarSub').textContent       = (group.type==='channel'?'Saluran':'Grup') + ' · ' + group.members.length + ' anggota';
+  document.getElementById('rcTopbarAvatar').textContent    = group.type==='channel' ? '📢' : '👥';
+  document.getElementById('rcBackBtn').onclick              = () => { document.getElementById('rcChatView').style.display='none'; rcShowCommunity(); };
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcMsgInput').value = '';
+  document.getElementById('rcBlockBanner').style.display = 'none';
+  ['rcContactInfoBtn','rcContactToggleMenuBtn','rcMuteMenuBtn','rcArchiveMenuBtn','rcSelectModeBtn','rcExportMenuBtn','rcClearChatMenuBtn'].forEach(id2=>{
+    const b = document.getElementById(id2); if (b) b.style.display = 'none';
+  });
+  rcExitSelectMode();
+  rcCancelReply();
+  rcLoadGroupMessages(true);
+  clearInterval(rcRefTimer);
+  rcRefTimer = setInterval(()=>rcLoadGroupMessages(false), 4000);
+}
+
+async function rcLoadGroupMessages(scrollDown){
+  if (!rcActiveGroup || !currentUser) return;
+  const others = rcActiveGroup.members.filter(m => m.toLowerCase() !== currentUser.username.toLowerCase());
+  let merged = [];
+  try{
+    for (const other of others) {
+      const res = await fetch(GAS_URL + '?action=getRosesMessages&me=' + encodeURIComponent(currentUser.username) + '&other=' + encodeURIComponent(other));
+      const msgs = await res.json();
+      for (const m of msgs) {
+        const p = rcParseEnvelope(m.teks);
+        if (p.type === 'group_invite' && p.group && p.group.id === rcActiveGroup.id) continue; // jangan tampilkan event undangan sbg bubble
+        if (p.groupId === rcActiveGroup.id) merged.push(m);
+      }
+    }
+  } catch(e){ /* silent */ }
+  const seen = new Set();
+  merged = merged.filter(m => { const k = m.from+'|'+m.waktu+'|'+m.teks; if (seen.has(k)) return false; seen.add(k); return true; });
+  merged.sort((a,b) => rcParseWaktu(a.waktu) - rcParseWaktu(b.waktu));
+  rcGroupMsgCache = merged;
+  rcRenderGroupMessages(merged, scrollDown);
+}
+function rcRenderGroupMessages(msgs, scrollDown){
+  const area = document.getElementById('rcMessages');
+  if (!msgs.length) { area.innerHTML = '<div class="rc-no-msg">👋 Belum ada pesan di ' + (rcActiveGroup.type==='channel'?'saluran':'grup') + ' ini</div>'; return; }
+  const me = currentUser.username.toLowerCase();
+  area.innerHTML = msgs.map(m => {
+    const p = rcParseEnvelope(m.teks);
+    const isSent = m.from.toLowerCase() === me;
+    const body = p.type === 'image' ? `<img src="${p.src}" style="max-width:100%;border-radius:10px;" onclick="rcOpenLightbox('${String(p.src).replace(/'/g,"\\'")}')">` : rcEscHtml(p.text||'');
+    return `<div class="rc-bwrap ${isSent?'sent':'received'}">
+      <div class="rc-msg-outer">
+        <div class="rc-bubble ${isSent?'sent':'received'}">
+          ${!isSent ? `<div style="font-size:0.68rem;font-weight:900;color:#2d6a4f;margin-bottom:2px;">${rcEscHtml(m.from)}</div>` : ''}
+          ${body}
+          <div class="rc-btime">${rcFmtTime(m.waktu)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  if (scrollDown) area.scrollTop = area.scrollHeight;
+}
+async function rcSendGroupMsg(){
+  if (!rcActiveGroup) return;
+  const input = document.getElementById('rcMsgInput');
+  const teks = input.value.trim();
+  if (!teks || !currentUser) return;
+  const btn = document.getElementById('rcSendBtn');
+  btn.disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+  const others = rcActiveGroup.members.filter(m => m.toLowerCase() !== currentUser.username.toLowerCase());
+  const payload = { type:'text', text: teks, groupId: rcActiveGroup.id, groupName: rcActiveGroup.name };
+  for (const other of others) { await rcSendRaw(other, payload); }
+  rcLoadGroupMessages(true);
+  btn.disabled = false;
+}
+
+function rcToggleDark(){
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('talkup_dark', isDark ? '1' : '0');
+  document.getElementById('rcDarkToggle').textContent = isDark ? '☀️' : '🌙';
+}
+(function initDark(){
+  const saved = localStorage.getItem('talkup_dark');
+  if (saved === '1' || saved === null) document.body.classList.add('dark');
+})();
+
+/* ══════════════════════════════════════════════════════
+   ⚙️ PENGATURAN (SETTINGS)
+══════════════════════════════════════════════════════ */
+function rcSettingsKey(){ return 'talkup_settings'; }
+function rcGetSettingsObj(){
+  try{ return JSON.parse(localStorage.getItem(rcSettingsKey()) || '{}'); } catch(e){ return {}; }
+}
+function rcGetSetting(name, def){
+  const s = rcGetSettingsObj();
+  return (name in s) ? s[name] : def;
+}
+function rcSetSetting(name, val){
+  const s = rcGetSettingsObj();
+  s[name] = val;
+  localStorage.setItem(rcSettingsKey(), JSON.stringify(s));
+}
+function rcToggleSetting(name, switchId){
+  const cur = rcGetSetting(name, name === 'enterSend' || name === 'notifSound');
+  rcSetSetting(name, !cur);
+  document.getElementById(switchId).classList.toggle('on', !cur);
+}
+function rcSyncDarkSwitch(){
+  document.getElementById('rcSwDark').classList.toggle('on', document.body.classList.contains('dark'));
+}
+
+const RC_WALLPAPERS = [
+  { id:'default', label:'Bawaan', bg:'' },
+  { id:'mint',    label:'Mint',   bg:'#e8f3ec' },
+  { id:'gold',    label:'Emas',   bg:'#f3e9d2' },
+  { id:'navy',    label:'Navy',   bg:'linear-gradient(160deg,#1b4332,#14301f)' },
+  { id:'blush',   label:'Blush',  bg:'#fbe9ea' },
+  { id:'stone',   label:'Batu',   bg:'#e7e5df' },
+];
+function rcApplyWallpaper(id){
+  const w = RC_WALLPAPERS.find(x => x.id === id) || RC_WALLPAPERS[0];
+  const msgEl = document.getElementById('rcMessages');
+  msgEl.style.background = w.bg || '';
+  localStorage.setItem('talkup_wallpaper', w.id);
+  document.querySelectorAll('.rc-wall-swatch').forEach(s => s.classList.toggle('active', s.dataset.id === w.id));
+}
+function rcRenderWallSwatches(){
+  const row = document.getElementById('rcWallRow');
+  const current = localStorage.getItem('talkup_wallpaper') || 'default';
+  row.innerHTML = RC_WALLPAPERS.map(w => {
+    const style = w.bg ? `background:${w.bg};` : 'background:#f7faf8;border:2px dashed #cfe3d4;';
+    return `<div class="rc-wall-swatch ${w.id===current?'active':''}" data-id="${w.id}" style="${style}" title="${w.label}" onclick="rcApplyWallpaper('${w.id}')"></div>`;
+  }).join('');
+}
+function rcSaveBio(){
+  if (!currentUser) return;
+  const val = document.getElementById('rcSetBio').value.trim();
+  localStorage.setItem('talkup_bio_' + currentUser.username, val);
+  showPbToast('✅ Info profil disimpan');
+}
+function rcPopulateSettings(){
+  if (!currentUser) return;
+  document.getElementById('rcSetAvatar').textContent = rcInitial(currentUser.username);
+  document.getElementById('rcSetUname').textContent  = currentUser.username;
+  document.getElementById('rcSetBio').value = localStorage.getItem('talkup_bio_' + currentUser.username) || '';
+  document.getElementById('rcSwNotif').classList.toggle('on', rcGetSetting('notifSound', true));
+  document.getElementById('rcSwEnter').classList.toggle('on', rcGetSetting('enterSend', true));
+  document.getElementById('rcSwPreview').classList.toggle('on', rcGetSetting('showPreview', true));
+  document.getElementById('rcSwReceipts').classList.toggle('on', rcGetSetting('sendReadReceipts', true));
+  document.getElementById('rcSwLastSeen').classList.toggle('on', rcGetSetting('showLastSeen', true));
+  rcSyncDarkSwitch();
+  rcRenderWallSwatches();
+  document.querySelectorAll('#rcFontRow .rc-chip').forEach(c => c.classList.toggle('active', c.dataset.size === (localStorage.getItem('talkup_fontsize')||'medium')));
+  const blocked = rcGetBlocked();
+  document.getElementById('rcBlockCountSub').textContent = blocked.length ? (blocked.length + ' pengguna diblokir: ' + blocked.join(', ')) : 'Tidak ada';
+}
+function rcOpenBlockList(){
+  const blocked = rcGetBlocked();
+  if (!blocked.length) { showPbToast('Belum ada pengguna yang diblokir'); return; }
+  showPbToast('Buka chat pengguna terkait & pilih menu ⋮ untuk membuka blokir.');
+}
+function rcClearCache(){
+  localStorage.removeItem('talkup_previews_' + currentUser.username);
+  localStorage.removeItem('talkup_favorites_' + currentUser.username);
+  localStorage.removeItem('talkup_pin_hint_seen');
+  showPbToast('🧹 Cache lokal (sematan & favorit) dibersihkan');
+  rcRenderUsers(rcAllUsers);
+}
+function rcOpenSettings(){
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display     = 'none';
+  document.getElementById('rcStatusView').style.display    = 'none';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcSettingsView').style.display  = 'flex';
+  document.getElementById('rcTopbarTitle').textContent    = 'Pengaturan';
+  document.getElementById('rcTopbarSub').textContent      = 'Kelola akun & preferensi';
+  document.getElementById('rcTopbarAvatar').textContent   = '⚙️';
+  document.getElementById('rcBackBtn').onclick            = rcCloseSettings;
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcBlockMenuBtn').style.display = 'none';
+  rcPopulateSettings();
+}
+function rcCloseSettings(){
+  rcShowContacts();
+}
+
+/* ══════════════════════════════════════════════════════
+   🚫 BLOKIR PENGGUNA
+══════════════════════════════════════════════════════ */
+function rcGetBlocked(){
+  try{ return JSON.parse(localStorage.getItem('talkup_blocked_' + (currentUser?currentUser.username:'')) || '[]'); } catch(e){ return []; }
+}
+function rcIsBlocked(username){
+  return rcGetBlocked().map(u=>u.toLowerCase()).includes((username||'').toLowerCase());
+}
+function rcToggleBlockCurrent(){
+  if (!rcChatUser) return;
+  let blocked = rcGetBlocked();
+  const already = rcIsBlocked(rcChatUser);
+  blocked = already ? blocked.filter(u => u.toLowerCase() !== rcChatUser.toLowerCase()) : [...blocked, rcChatUser];
+  localStorage.setItem('talkup_blocked_' + currentUser.username, JSON.stringify(blocked));
+  showPbToast(already ? ('🔓 Blokir dibuka untuk ' + rcChatUser) : ('🚫 ' + rcChatUser + ' telah diblokir'));
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  rcRefreshBlockUI();
+}
+function rcRefreshBlockUI(){
+  if (!rcChatUser) return;
+  const blocked = rcIsBlocked(rcChatUser);
+  const btn = document.getElementById('rcBlockMenuBtn');
+  btn.style.display = '';
+  btn.textContent = blocked ? '🔓 Buka Blokir' : '🚫 Blokir Pengguna';
+  document.getElementById('rcBlockBanner').style.display = blocked ? '' : 'none';
+}
+
+/* ══════════════════════════════════════════════════════
+   🔄 PEMBARUAN / STATUS (ala WhatsApp Status)
+══════════════════════════════════════════════════════ */
+const RC_STATUS_TTL_MS = 24 * 60 * 60 * 1000;
+const RC_STATUS_BGS = ['#2d6a4f','#1b4332','#c9a463','#b08d57','#3a7d5c','#5b6f63'];
+let rcStatusBg = RC_STATUS_BGS[0];
+
+function rcMyStatusKey(){ return 'talkup_mystatus_' + (currentUser ? currentUser.username : ''); }
+function rcGetMyStatus(){
+  try{
+    const s = JSON.parse(localStorage.getItem(rcMyStatusKey()) || 'null');
+    if (s && (Date.now() - s.ts) < RC_STATUS_TTL_MS) return s;
+  } catch(e){}
+  return null;
+}
+function rcTimeAgo(ts){
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'Baru saja';
+  if (min < 60) return min + ' menit lalu';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + ' jam lalu';
+  return 'Kemarin';
+}
+function rcRenderBgSwatches(){
+  const row = document.getElementById('rcBgSwatchRow');
+  row.innerHTML = RC_STATUS_BGS.map(c =>
+    `<div class="rc-bgswatch ${c===rcStatusBg?'active':''}" style="background:${c};" onclick="rcSelectStatusBg('${c}')"></div>`
+  ).join('');
+  document.getElementById('rcStatusTapArea').style.background = rcStatusBg;
+}
+function rcSelectStatusBg(c){
+  rcStatusBg = c;
+  rcRenderBgSwatches();
+}
+function rcOnMyStatusClick(){
+  const mine = rcGetMyStatus();
+  if (mine) { rcOpenStory([Object.assign({username: currentUser.username}, mine)], 0, true); }
+  else { rcShowComposer(); }
+}
+function rcShowComposer(){
+  document.getElementById('rcStatusComposer').classList.add('show');
+  document.getElementById('rcStatusText').value = '';
+  rcRenderBgSwatches();
+  document.getElementById('rcStatusText').focus();
+}
+async function rcPostStatus(){
+  const text = document.getElementById('rcStatusText').value.trim();
+  if (!text) { showPbToast('⚠️ Tulis dulu pembaruan kamu'); return; }
+  const entry = { text, bg: rcStatusBg, ts: Date.now() };
+  localStorage.setItem(rcMyStatusKey(), JSON.stringify(entry));
+  try{ await gasRequest({ action:'postStatus', username: currentUser.username, text, bg: rcStatusBg, ts: entry.ts }); } catch(e){ /* backend belum mendukung, tersimpan lokal */ }
+  document.getElementById('rcStatusComposer').classList.remove('show');
+  showPbToast('✅ Pembaruan dibagikan');
+  rcRenderMyStatusRow();
+  rcLoadStatuses();
+}
+function rcRenderMyStatusRow(){
+  const mine = rcGetMyStatus();
+  const ring = document.getElementById('rcMyStatusRing');
+  const inner = document.getElementById('rcMyStatusRingInner');
+  const sub = document.getElementById('rcMyStatusSub');
+  const plus = document.getElementById('rcMyStatusPlus');
+  if (mine) {
+    ring.classList.remove('empty');
+    inner.textContent = rcInitial(currentUser.username);
+    sub.textContent = rcTimeAgo(mine.ts);
+    plus.textContent = '👁';
+  } else {
+    ring.classList.add('empty');
+    inner.textContent = currentUser ? rcInitial(currentUser.username) : '?';
+    sub.textContent = 'Ketuk untuk tambah pembaruan';
+    plus.textContent = '+';
+  }
+}
+async function rcLoadStatuses(){
+  rcRenderMyStatusRow();
+  const listEl = document.getElementById('rcOtherStatusList');
+  const lbl = document.getElementById('rcOtherStatusLbl');
+  const note = document.getElementById('rcStatusNote');
+  try{
+    const res = await gasRequest({ action:'getStatuses' });
+    const me = currentUser.username.toLowerCase();
+    const blocked = rcGetBlocked().map(u=>u.toLowerCase());
+    const others = (Array.isArray(res) ? res : []).filter(s =>
+      s.username && s.username.toLowerCase() !== me &&
+      !blocked.includes(s.username.toLowerCase()) &&
+      (Date.now() - s.ts) < RC_STATUS_TTL_MS
+    );
+    if (!others.length) {
+      lbl.style.display = 'none';
+      listEl.innerHTML = '';
+      note.textContent = '';
+      return;
+    }
+    lbl.style.display = '';
+    rcStatusCache = others;
+    const viewed = rcGetViewedStatuses();
+    listEl.innerHTML = others.map((s,i) => {
+      const seen = viewed.includes(s.username + '|' + s.ts);
+      return `<div class="rc-status-item" onclick="rcOpenStory(rcStatusCache, ${i}, false)">
+        <div class="rc-status-ring ${seen?'seen':''}"><div class="rc-status-ring-inner">${rcInitial(s.username)}</div></div>
+        <div><div class="rc-status-name">${rcEscHtml(s.username)}</div><div class="rc-status-time">${rcTimeAgo(s.ts)}</div></div>
+      </div>`;
+    }).join('');
+    note.textContent = '';
+  } catch(e){
+    lbl.style.display = 'none';
+    listEl.innerHTML = '';
+    note.textContent = 'ℹ️ Pembaruan dari kontak lain memerlukan endpoint "postStatus"/"getStatuses" di backend TalkMe.';
+  }
+}
+let rcStatusCache = [];
+function rcGetViewedStatuses(){
+  try{ return JSON.parse(localStorage.getItem('talkup_viewed_status') || '[]'); } catch(e){ return []; }
+}
+function rcMarkViewed(key){
+  const v = rcGetViewedStatuses();
+  if (!v.includes(key)) { v.push(key); localStorage.setItem('talkup_viewed_status', JSON.stringify(v)); }
+}
+function rcShowStatusView(){
+  rcCurrentTab = 'update';
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display     = 'none';
+  document.getElementById('rcSettingsView').style.display = 'none';
+  document.getElementById('rcStatusView').style.display    = 'flex';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcTopbarTitle').textContent    = 'Pembaruan';
+  document.getElementById('rcTopbarSub').textContent      = 'Status kontak kamu';
+  document.getElementById('rcTopbarAvatar').textContent   = '🔄';
+  document.getElementById('rcBackBtn').onclick            = rcClose;
+  document.getElementById('rcTopbar').classList.add('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcBlockMenuBtn').style.display = 'none';
+  document.getElementById('rcStatusComposer').classList.remove('show');
+  document.querySelectorAll('.rc-nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'update'));
+  rcLoadStatuses();
+}
+
+/* ── story viewer ── */
+let rcStoryQueue = [], rcStoryIdx = 0, rcStoryIsMine = false, rcStoryTimer = null;
+function rcOpenStory(queue, idx, isMine){
+  rcStoryQueue = queue; rcStoryIdx = idx; rcStoryIsMine = !!isMine;
+  document.getElementById('rcStoryViewer').classList.add('show');
+  rcRenderStory();
+}
+function rcRenderStory(){
+  clearTimeout(rcStoryTimer);
+  const s = rcStoryQueue[rcStoryIdx];
+  if (!s) { rcCloseStory(); return; }
+  document.getElementById('rcStoryAvatar').textContent = rcInitial(s.username);
+  document.getElementById('rcStoryName').textContent = rcStoryIsMine ? 'Status Saya' : s.username;
+  document.getElementById('rcStoryTime').textContent = rcTimeAgo(s.ts);
+  document.getElementById('rcStoryBody').style.background = s.bg || '#14301f';
+  document.getElementById('rcStoryText').textContent = s.text;
+  document.getElementById('rcStoryDelBtn').style.display = rcStoryIsMine ? '' : 'none';
+  if (!rcStoryIsMine) rcMarkViewed(s.username + '|' + s.ts);
+
+  const bars = document.getElementById('rcStoryBars');
+  bars.innerHTML = rcStoryQueue.map(() => '<div class="rc-story-bar"><div class="rc-story-bar-fill"></div></div>').join('');
+  const fills = bars.querySelectorAll('.rc-story-bar-fill');
+  fills.forEach((f,i) => { f.style.transition = 'none'; f.style.width = i < rcStoryIdx ? '100%' : '0%'; });
+  requestAnimationFrame(() => {
+    const cur = fills[rcStoryIdx];
+    if (cur) { cur.style.transition = 'width 5s linear'; cur.style.width = '100%'; }
+  });
+  rcStoryTimer = setTimeout(rcStoryNext, 5000);
+}
+function rcStoryNext(){
+  if (rcStoryIdx < rcStoryQueue.length - 1) { rcStoryIdx++; rcRenderStory(); }
+  else { rcCloseStory(); }
+}
+function rcStoryPrev(){
+  if (rcStoryIdx > 0) { rcStoryIdx--; rcRenderStory(); }
+}
+function rcCloseStory(){
+  clearTimeout(rcStoryTimer);
+  document.getElementById('rcStoryViewer').classList.remove('show');
+  if (rcCurrentTab === 'update') rcLoadStatuses();
+}
+async function rcDeleteMyStatus(){
+  localStorage.removeItem(rcMyStatusKey());
+  try{ await gasRequest({ action:'deleteStatus', username: currentUser.username }); } catch(e){ /* silent */ }
+  showPbToast('🗑️ Pembaruan dihapus');
+  rcCloseStory();
+}
+
+/* ══════════════════════════════════════════════════════
+   ✨ FITUR TAMBAHAN ALA WHATSAPP
+══════════════════════════════════════════════════════ */
+
+/* ── 🏷️ Nama panggilan (nickname) kontak ── */
+function rcNicknamesKey(){ return 'talkup_nicknames_' + (currentUser ? currentUser.username : ''); }
+function rcGetNicknames(){ try{ return JSON.parse(localStorage.getItem(rcNicknamesKey()) || '{}'); } catch(e){ return {}; } }
+function rcGetNickname(username){ return rcGetNicknames()[username] || ''; }
+function rcSaveNickname(){
+  if (!rcChatUser) return;
+  const val = document.getElementById('rcNickInput').value.trim();
+  const all = rcGetNicknames();
+  if (val) all[rcChatUser] = val; else delete all[rcChatUser];
+  localStorage.setItem(rcNicknamesKey(), JSON.stringify(all));
+  showPbToast('✅ Nama panggilan disimpan');
+  rcRenderUsers(rcAllUsers);
+}
+
+/* ── 🗄️ Arsipkan chat ── */
+function rcArchiveKey(){ return 'talkup_archived_' + (currentUser ? currentUser.username : ''); }
+function rcGetArchived(){ try{ return JSON.parse(localStorage.getItem(rcArchiveKey()) || '[]'); } catch(e){ return []; } }
+function rcToggleArchiveCurrent(){
+  if (!rcChatUser) return;
+  rcToggleArchiveFor(rcChatUser);
+}
+function rcToggleArchiveFor(username){
+  let arch = rcGetArchived();
+  const already = arch.includes(username);
+  arch = already ? arch.filter(u=>u!==username) : [...arch, username];
+  localStorage.setItem(rcArchiveKey(), JSON.stringify(arch));
+  showPbToast(already ? ('📤 ' + username + ' dikeluarkan dari arsip') : ('🗄️ ' + username + ' diarsipkan'));
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  if (rcChatUser === username) rcSyncContactInfoUI();
+  if (already === false && rcChatUser === username) rcShowContacts();
+  rcRenderUsers(rcAllUsers);
+}
+function rcOpenArchived(){
+  const arch = rcGetArchived();
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display = 'none';
+  document.getElementById('rcSettingsView').style.display = 'none';
+  document.getElementById('rcStatusView').style.display = 'none';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcContactInfoView').classList.remove('show');
+  document.getElementById('rcStarredView').classList.remove('show');
+  document.getElementById('rcArchivedView').classList.add('show');
+  document.getElementById('rcTopbarTitle').textContent = 'Chat Diarsipkan';
+  document.getElementById('rcTopbarSub').textContent = arch.length + ' percakapan';
+  document.getElementById('rcTopbarAvatar').textContent = '🗄️';
+  document.getElementById('rcBackBtn').onclick = () => { document.getElementById('rcArchivedView').classList.remove('show'); rcShowContacts(); };
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  const list = document.getElementById('rcArchivedList');
+  if (!arch.length) { list.innerHTML = '<div class="rc-empty">🗄️ Belum ada chat yang diarsipkan</div>'; return; }
+  list.innerHTML = arch.map(u => `
+    <div class="rc-archive-item" onclick="rcOpenChat('${u.replace(/'/g,"\\'")}')">
+      <div class="rc-avatar">${rcInitial(u)}</div>
+      <div style="flex:1;"><div class="rc-contact-name">${rcEscHtml(rcGetNickname(u)||u)}</div><div class="rc-contact-sub">Ketuk untuk membuka</div></div>
+    </div>`).join('');
+}
+
+/* ── 🔕 Bisukan notifikasi per kontak ── */
+function rcMuteKey(){ return 'talkup_muted_' + (currentUser ? currentUser.username : ''); }
+function rcGetMuted(){ try{ return JSON.parse(localStorage.getItem(rcMuteKey()) || '[]'); } catch(e){ return []; } }
+function rcIsMuted(username){ return rcGetMuted().includes(username); }
+function rcToggleMuteCurrent(){
+  if (!rcChatUser) return;
+  rcToggleMuteFor(rcChatUser);
+}
+function rcToggleMuteFor(username){
+  let muted = rcGetMuted();
+  const already = muted.includes(username);
+  muted = already ? muted.filter(u=>u!==username) : [...muted, username];
+  localStorage.setItem(rcMuteKey(), JSON.stringify(muted));
+  showPbToast(already ? ('🔔 Notifikasi ' + username + ' diaktifkan kembali') : ('🔕 ' + username + ' dibisukan'));
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  if (rcChatUser === username) rcSyncContactInfoUI();
+  rcRenderUsers(rcAllUsers);
+}
+
+/* ── ⭐ Bintangi pesan ── */
+function rcStarKey(){ return 'talkup_starred_' + (currentUser ? currentUser.username : ''); }
+function rcGetStarred(){ try{ return JSON.parse(localStorage.getItem(rcStarKey()) || '[]'); } catch(e){ return []; } }
+function rcToggleStar(id){
+  let stars = rcGetStarred();
+  const already = stars.includes(id);
+  stars = already ? stars.filter(x=>x!==id) : [...stars, id];
+  localStorage.setItem(rcStarKey(), JSON.stringify(stars));
+  showPbToast(already ? '☆ Bintang dihapus' : '⭐ Pesan dibintangi');
+  rcRenderMessages(rcMsgsCache, false);
+}
+function rcOpenStarred(){
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  const stars = rcGetStarred();
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display = 'none';
+  document.getElementById('rcSettingsView').style.display = 'none';
+  document.getElementById('rcStatusView').style.display = 'none';
+  document.getElementById('rcCommunityView').style.display = 'none';
+  document.getElementById('rcArchivedView').classList.remove('show');
+  document.getElementById('rcContactInfoView').classList.remove('show');
+  document.getElementById('rcStarredView').classList.add('show');
+  document.getElementById('rcTopbarTitle').textContent = 'Pesan Berbintang';
+  document.getElementById('rcTopbarSub').textContent = stars.length + ' pesan';
+  document.getElementById('rcTopbarAvatar').textContent = '⭐';
+  document.getElementById('rcBackBtn').onclick = () => { document.getElementById('rcStarredView').classList.remove('show'); rcShowContacts(); };
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+  const list = document.getElementById('rcStarredList');
+  const inThisChat = rcMsgsCache.filter(m => stars.includes(m.id));
+  if (!inThisChat.length) {
+    list.innerHTML = '<div class="rc-empty">⭐ Belum ada pesan berbintang di chat ini.<br>Buka chat lalu ketuk ☆ pada pesan.</div>';
+    return;
+  }
+  list.innerHTML = inThisChat.map(m => {
+    const p = rcParseEnvelope(m.teks);
+    const txt = p.type === 'image' ? '📷 Gambar' : (p.text||'');
+    return `<div class="rc-star-item" style="cursor:pointer;" onclick="document.getElementById('rcStarredView').classList.remove('show'); rcOpenChat('${rcChatUser.replace(/'/g,"\\'")}');">
+      <div class="rc-avatar">${rcInitial(m.from)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="rc-star-text">${rcEscHtml(m.from)}</div>
+        <div class="rc-star-meta">${rcEscHtml(txt.slice(0,60))}</div>
+      </div>
+      <button class="rc-msg-btn" onclick="event.stopPropagation(); rcToggleStar(${m.id}); rcOpenStarred();">☆</button>
+    </div>`;
+  }).join('');
+}
+
+/* ── 📋 Salin pesan ── */
+async function rcCopyMsg(id){
+  const msg = rcMsgsCache.find(m => m.id === id);
+  if (!msg) return;
+  const p = rcParseEnvelope(msg.teks);
+  try{
+    await navigator.clipboard.writeText(p.text || '');
+    showPbToast('📋 Pesan disalin');
+  } catch(e){ showPbToast('⚠️ Gagal menyalin (izin clipboard ditolak)'); }
+}
+
+/* ── ↪ Teruskan pesan ── */
+function rcForwardMsg(id){
+  const msg = rcMsgsCache.find(m => m.id === id);
+  if (!msg) return;
+  const target = prompt('Teruskan pesan ini ke username:');
+  if (!target) return;
+  const exists = rcAllUsers.find(u => u.username.toLowerCase() === target.trim().toLowerCase());
+  if (!exists) { showPbToast('⚠️ Pengguna "' + target + '" tidak ditemukan'); return; }
+  const p = rcParseEnvelope(msg.teks);
+  const payload = p.type === 'image' ? { type:'image', src:p.src } : { type:'text', text:'↪ ' + (p.text||'') };
+  fetch(GAS_URL, {
+    method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ action:'roses_send', from:currentUser.username, to:exists.username, teks:JSON.stringify(payload), waktu:rcNow() })
+  }).then(()=> showPbToast('↪ Pesan diteruskan ke ' + exists.username)).catch(()=> showPbToast('❌ Gagal meneruskan pesan'));
+}
+
+/* ── ☑️ Mode pilih & hapus banyak pesan sekaligus (untuk saya) ── */
+let rcSelectMode = false, rcSelectedIds = [];
+function rcEnterSelectMode(){
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  rcSelectMode = true; rcSelectedIds = [];
+  document.getElementById('rcSelectBar').classList.add('show');
+  rcUpdateSelectBar();
+}
+function rcExitSelectMode(){
+  rcSelectMode = false; rcSelectedIds = [];
+  document.getElementById('rcSelectBar').classList.remove('show');
+  document.querySelectorAll('.rc-bwrap.selected').forEach(el=>el.classList.remove('selected'));
+}
+function rcSelectModeClick(id, e){
+  if (!rcSelectMode) return;
+  e.stopPropagation();
+  const el = document.getElementById('rcmsg-' + id);
+  const idx = rcSelectedIds.indexOf(id);
+  if (idx === -1) { rcSelectedIds.push(id); if (el) el.classList.add('selected'); }
+  else { rcSelectedIds.splice(idx,1); if (el) el.classList.remove('selected'); }
+  rcUpdateSelectBar();
+}
+function rcUpdateSelectBar(){
+  document.getElementById('rcSelectCount').textContent = rcSelectedIds.length + ' dipilih';
+}
+function rcGetHiddenForMe(){ try{ return JSON.parse(localStorage.getItem('talkup_hidden_' + (currentUser?currentUser.username:'')) || '[]'); } catch(e){ return []; } }
+function rcHideForMe(ids){
+  const hidden = rcGetHiddenForMe();
+  const merged = Array.from(new Set([...hidden, ...ids]));
+  localStorage.setItem('talkup_hidden_' + currentUser.username, JSON.stringify(merged));
+}
+function rcDeleteSelected(){
+  if (!rcSelectedIds.length) { showPbToast('⚠️ Pilih dulu pesan yang ingin dihapus'); return; }
+  if (!confirm('🗑️ Hapus ' + rcSelectedIds.length + ' pesan (untuk saya)?')) return;
+  rcHideForMe(rcSelectedIds);
+  showPbToast('🗑️ ' + rcSelectedIds.length + ' pesan dihapus untuk saya');
+  rcExitSelectMode();
+  rcRenderMessages(rcMsgsCache, false);
+}
+function rcForwardSelected(){
+  if (!rcSelectedIds.length) { showPbToast('⚠️ Pilih dulu pesan yang ingin diteruskan'); return; }
+  const target = prompt('Teruskan ' + rcSelectedIds.length + ' pesan ke username:');
+  if (!target) return;
+  const exists = rcAllUsers.find(u => u.username.toLowerCase() === target.trim().toLowerCase());
+  if (!exists) { showPbToast('⚠️ Pengguna "' + target + '" tidak ditemukan'); return; }
+  const chosen = rcMsgsCache.filter(m => rcSelectedIds.includes(m.id));
+  (async () => {
+    for (const m of chosen) {
+      const p = rcParseEnvelope(m.teks);
+      const payload = p.type === 'image' ? { type:'image', src:p.src } : { type:'text', text:'↪ ' + (p.text||'') };
+      try{
+        await fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'roses_send', from:currentUser.username, to:exists.username, teks:JSON.stringify(payload), waktu:rcNow() }) });
+      } catch(e){}
+    }
+    showPbToast('↪ ' + chosen.length + ' pesan diteruskan ke ' + exists.username);
+    rcExitSelectMode();
+  })();
+}
+
+/* ── 🧹 Hapus seluruh chat (untuk saya) ── */
+function rcClearChat(){
+  if (!rcChatUser) return;
+  if (!confirm('🧹 Hapus semua pesan di chat ini (hanya untuk tampilan Anda)?')) return;
+  const ids = rcMsgsCache.map(m => m.id);
+  rcHideForMe(ids);
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  showPbToast('🧹 Chat dibersihkan');
+  rcRenderMessages(rcMsgsCache, true);
+}
+
+/* ── 📤 Ekspor obrolan ke file .txt ── */
+function rcExportChat(){
+  if (!rcChatUser || !rcMsgsCache.length) { showPbToast('⚠️ Tidak ada pesan untuk diekspor'); return; }
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  const lines = rcMsgsCache
+    .filter(m => !rcIsEventType(rcParseEnvelope(m.teks)))
+    .map(m => {
+      const p = rcParseEnvelope(m.teks);
+      const txt = p.type === 'image' ? '[Gambar]' : (p.text || '');
+      return `[${m.waktu}] ${m.from}: ${txt}`;
+    }).join('\n');
+  const blob = new Blob([lines], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'TalkMe_' + rcChatUser + '.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showPbToast('📤 Obrolan diekspor');
+}
+
+/* ── ⏳ Pesan sementara (auto-hilang setelah 24 jam) ── */
+function rcDisappearKey(){ return 'talkup_disappear_' + (currentUser ? currentUser.username : ''); }
+function rcGetDisappearing(){ try{ return JSON.parse(localStorage.getItem(rcDisappearKey()) || '[]'); } catch(e){ return []; } }
+function rcIsDisappearing(username){ return rcGetDisappearing().includes(username); }
+function rcToggleDisappearingCurrent(){
+  if (!rcChatUser) return;
+  let list = rcGetDisappearing();
+  const already = list.includes(rcChatUser);
+  list = already ? list.filter(u=>u!==rcChatUser) : [...list, rcChatUser];
+  localStorage.setItem(rcDisappearKey(), JSON.stringify(list));
+  showPbToast(already ? '⏳ Pesan sementara dimatikan' : '⏳ Pesan akan otomatis hilang setelah 24 jam');
+  rcSyncContactInfoUI();
+  rcRenderMessages(rcMsgsCache, false);
+}
+
+/* ── 👤 Panel Info Kontak ── */
+function rcOpenContactInfo(){
+  if (!rcChatUser) return;
+  document.getElementById('rcMenuDropdown').classList.remove('show');
+  document.getElementById('rcContactsView').style.display = 'none';
+  document.getElementById('rcChatView').style.display = 'none';
+  document.getElementById('rcContactInfoView').classList.add('show');
+  document.getElementById('rcTopbarTitle').textContent = 'Info Kontak';
+  document.getElementById('rcTopbarSub').textContent = '';
+  document.getElementById('rcTopbarAvatar').textContent = 'ℹ️';
+  document.getElementById('rcBackBtn').onclick = () => { document.getElementById('rcContactInfoView').classList.remove('show'); rcOpenChat(rcChatUser); };
+  document.getElementById('rcTopbar').classList.remove('home');
+  document.getElementById('rcSearchToggleBtn').style.display = 'none';
+  if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
+
+  document.getElementById('rcInfoAvatar').textContent = rcInitial(rcChatUser);
+  document.getElementById('rcInfoName').textContent = rcChatUser;
+  document.getElementById('rcInfoBio').textContent = localStorage.getItem('talkup_bio_' + rcChatUser) || 'Belum ada info profil';
+  document.getElementById('rcNickInput').value = rcGetNickname(rcChatUser);
+
+  const imgs = rcMsgsCache
+    .map(m => rcParseEnvelope(m.teks))
+    .filter(p => p.type === 'image')
+    .slice(-12).reverse();
+  const grid = document.getElementById('rcInfoMediaGrid');
+  grid.innerHTML = imgs.length
+    ? imgs.map(p => `<img src="${p.src}" onclick="rcOpenLightbox('${String(p.src).replace(/'/g,"\\'")}')">`).join('')
+    : '<div class="rc-empty" style="grid-column:1/-1;padding:14px 4px;">Belum ada media dibagikan</div>';
+
+  rcSyncContactInfoUI();
+}
+function rcSyncMenuContactBtn(){
+  const btn = document.getElementById('rcContactToggleMenuBtn');
+  if (!btn || !rcChatUser) return;
+  btn.textContent = rcIsContact(rcChatUser) ? '👤 Batalkan dari Kontak' : '👤 Tambah ke Kontak';
+}
+function rcSyncContactInfoUI(){
+  if (!rcChatUser) return;
+  rcSyncMenuContactBtn();
+  const muted = rcIsMuted(rcChatUser);
+  const archived = rcGetArchived().includes(rcChatUser);
+  const disappearing = rcIsDisappearing(rcChatUser);
+  const blocked = rcIsBlocked(rcChatUser);
+  const muteSub = document.getElementById('rcInfoMuteSub');
+  if (muteSub) muteSub.textContent = muted ? 'Aktif' : 'Nonaktif';
+  const disSub = document.getElementById('rcInfoDisappearSub');
+  if (disSub) disSub.textContent = disappearing ? 'Aktif · pesan hilang setelah 24 jam' : 'Nonaktif · pesan hilang setelah 24 jam bila aktif';
+  const archTitle = document.getElementById('rcInfoArchiveTitle');
+  if (archTitle) archTitle.textContent = archived ? 'Keluarkan dari Arsip' : 'Arsipkan Chat';
+  const blockTitle = document.getElementById('rcInfoBlockTitle');
+  if (blockTitle) blockTitle.textContent = blocked ? 'Buka Blokir' : 'Blokir Pengguna';
+  const contactTitle = document.getElementById('rcInfoContactTitle');
+  if (contactTitle) contactTitle.textContent = rcIsContact(rcChatUser) ? '✅ Batalkan dari Kontak' : 'Tambah ke Kontak';
+}
+
+/* ── 🔤 Ukuran teks chat ── */
+function rcSetFontSize(size){
+  document.body.classList.remove('rc-font-small','rc-font-large');
+  if (size === 'small') document.body.classList.add('rc-font-small');
+  if (size === 'large') document.body.classList.add('rc-font-large');
+  localStorage.setItem('talkup_fontsize', size);
+  document.querySelectorAll('#rcFontRow .rc-chip').forEach(c => c.classList.toggle('active', c.dataset.size === size));
+}
+(function rcApplyStoredFontSize(){
+  const size = localStorage.getItem('talkup_fontsize');
+  if (size === 'small') document.body.classList.add('rc-font-small');
+  if (size === 'large') document.body.classList.add('rc-font-large');
+})();
+
+/* ══════════════════════════════════════════════════════
+   🚀 INIT
+══════════════════════════════════════════════════════ */
+document.getElementById('rcDarkToggle').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+rcApplyWallpaper(localStorage.getItem('talkup_wallpaper') || 'default');
+if (localStorage.getItem('talkup_welcomed') !== '1') {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('welcomeScreen').style.display = 'flex';
+} else if (currentUser) {
+  enterApp();
+} else {
+  document.getElementById('authScreen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
