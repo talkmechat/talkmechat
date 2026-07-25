@@ -1,5 +1,5 @@
-## Sedang Dalam Pemeliharaan/Update Sistem, Proses ini memakan waktu beberapa saat
-
+## Sedang Dalam Pemeliharaan/Update Sistem
+## Proses ini memakan waktu beberapa saat
 <!--
 **talkmechat/talkmechat** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
