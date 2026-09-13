@@ -1459,9 +1459,14 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
     background:#efeae2;
   }
   body.dark .rc-app.rc-open #rcChatView{ background:#0b141a; }
-  /* Panel lain (Pengaturan, Status, Komunitas, dll) tetap nutup 1 layar penuh di atas grid */
+  /* Panel lain (Pengaturan, Status, Komunitas, dll) tetap nutup 1 layar penuh di atas grid.
+     PENTING: elemen-elemen ini pakai flex:1 (mengandalkan flex container lama), tapi begitu
+     jadi grid item langsung, flex:1 tidak berlaku dan min-height:0 bikin tingginya kolaps
+     jadi 0 -> makanya kelihatan blank di layar lebar (PC/desktop). Kasih height eksplisit
+     supaya tetap penuh 1 layar terlepas dari flex/grid context di atasnya. */
   .rc-app.rc-open > *:not(#rcTopbar):not(#rcContactsView):not(#rcChatView){
     grid-column:1 / -1; grid-row:1 / -1;
+    height:100%; min-height:0; overflow-y:auto;
   }
   .rc-app.rc-open.rc-panel-open #rcContactsView,
   .rc-app.rc-open.rc-panel-open #rcChatView{
