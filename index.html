@@ -3290,8 +3290,26 @@ async function enterApp() {
   document.getElementById('welcomeScreen').style.display = 'none';
   if (currentUser && currentUser.username) {
     await rcPullCloudDataWithProgress(currentUser.username);
+    await rcRefreshMyUserId();
   }
   rcOpenApp();
+}
+
+// Perbaiki paksa currentUser.userId setiap kali app dibuka, terlepas dari kapan
+// rcLoadUsers() (daftar kontak) selesai. Ini nolong akun yang sesi login-nya
+// tersimpan SEBELUM backend generate ID buat dia -> localStorage kebawa userId
+// kosong selamanya kalau tidak dipaksa cek ulang begini.
+async function rcRefreshMyUserId(){
+  try {
+    const url = GAS_URL + '?action=getUsers&origin=' + encodeURIComponent(location.hostname) + '&apiKey=' + encodeURIComponent(API_KEY) + '&q=' + encodeURIComponent(currentUser.username);
+    const res = await fetch(url);
+    const list = await res.json();
+    const me = Array.isArray(list) ? list.find(u => u.username.toLowerCase() === currentUser.username.toLowerCase()) : null;
+    if (me && me.userId && me.userId !== currentUser.userId) {
+      currentUser.userId = me.userId;
+      localStorage.setItem('rst_user', JSON.stringify(currentUser));
+    }
+  } catch(e) { /* diam saja, bukan fitur kritis kalau gagal sekali */ }
 }
 
 /* ══════════════════════════════════════════════════════
