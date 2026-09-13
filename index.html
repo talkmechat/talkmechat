@@ -5836,6 +5836,14 @@ function rcOpenSettings(){
   if (document.getElementById('rcCallBtn')) document.getElementById('rcCallBtn').style.display = 'none';
   document.getElementById('rcBlockMenuBtn').style.display = 'none';
   rcPopulateSettings();
+  // ID kadang belum ke-load waktu app pertama dibuka (race condition dengan
+  // rcRefreshMyUserId di startup), jadi refresh ulang tiap buka Pengaturan
+  // supaya ID pasti muncul, lalu render lagi kalau ada perubahan.
+  rcRefreshMyUserId().then(() => {
+    if (document.getElementById('rcSettingsView').style.display === 'flex') {
+      rcPopulateSettings();
+    }
+  });
 }
 function rcCloseSettings(){
   rcShowContacts();
