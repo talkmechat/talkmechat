@@ -2183,6 +2183,7 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
     <div class="rc-info-avatar" id="rcInfoAvatar">?</div>
     <div class="rc-info-name" id="rcInfoName">-</div>
     <div class="rc-info-bio" id="rcInfoBio"></div>
+    <div class="rc-info-bio" id="rcInfoUserId" style="cursor:pointer;opacity:.75;font-size:13px;" title="Ketuk untuk salin ID"></div>
     <div class="rc-nick-edit">
       <input id="rcNickInput" placeholder="Nama panggilan (opsional)">
       <button onclick="rcSaveNickname()">Simpan</button>
@@ -2352,7 +2353,8 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
       <b><i class="ic ic-plus"></i> Tambah Kontak</b>
     </div>
     <div class="rc-modal-body">
-      <input class="rc-modal-input" id="rcAddContactInput" placeholder="Cari username..." oninput="rcRenderAddContactResults()">
+      <input class="rc-modal-input" id="rcAddContactInput" type="tel" inputmode="numeric" maxlength="8" placeholder="Masukkan ID 8 digit..." oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8); rcClearAddContactResult();" onkeydown="if(event.key==='Enter') rcSubmitAddContactId()">
+      <button class="rc-modal-input" style="margin-top:8px;cursor:pointer;text-align:center;font-weight:600;" onclick="rcSubmitAddContactId()">🔍 Cari</button>
       <div id="rcAddContactResults"></div>
     </div>
   </div>
@@ -3173,7 +3175,7 @@ async function doLogin() {
       return;
     }
     if (res.ok) {
-      currentUser = { username: res.username };
+      currentUser = { username: res.username, userId: res.userId || '' };
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3255,7 +3257,7 @@ async function doRegister() {
     const res = await gasRequest({ action: 'register', username, password, cfToken: rcTurnstileToken });
     rcResetHumanCheck();
     if (res.ok) {
-      currentUser = { username: res.username };
+      currentUser = { username: res.username, userId: res.userId || '' };
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3568,6 +3570,16 @@ async function rcLoadUsers(){
     rcAllUsers = await res.json();
     rcRenderUsers(rcAllUsers);
     rcCheckOwnAccountStatus();
+    // Sesi lama (localStorage) mungkin belum punya userId tersimpan — isi dari
+    // hasil getUsers begitu ketemu, biar panel profil & salin ID tetap jalan
+    // tanpa harus logout-login dulu.
+    if (currentUser && !currentUser.userId) {
+      const me = rcAllUsers.find(u => u.username.toLowerCase() === currentUser.username.toLowerCase());
+      if (me && me.userId) {
+        currentUser.userId = me.userId;
+        localStorage.setItem('rst_user', JSON.stringify(currentUser));
+      }
+    }
   } catch(e){ document.getElementById('rcUserList').innerHTML='<div class="rc-empty">⚠️ Gagal memuat pengguna</div>'; }
 }
 function rcSearchUsers(){
@@ -4968,27 +4980,43 @@ function rcToggleContactCurrent(){
 function rcOpenAddContact(){
   document.getElementById('rcAddContactInput').value = '';
   document.getElementById('rcAddContactModal').classList.add('show');
-  rcRenderAddContactResults();
+  rcClearAddContactResult();
+  setTimeout(() => document.getElementById('rcAddContactInput').focus(), 150);
 }
 function rcCloseAddContact(){ document.getElementById('rcAddContactModal').classList.remove('show'); }
-function rcRenderAddContactResults(){
-  const q = document.getElementById('rcAddContactInput').value.trim().toLowerCase();
+function rcClearAddContactResult(){
+  const id = document.getElementById('rcAddContactInput').value.trim();
   const el = document.getElementById('rcAddContactResults');
-  if (!q) { el.innerHTML = '<div class="rc-empty">🔍 Ketik username orang yang mau kamu tambahkan</div>'; return; }
-  const me = currentUser ? currentUser.username.toLowerCase() : '';
-  let users = rcAllUsers.filter(u => u.username.toLowerCase() !== me && u.username.toLowerCase().includes(q));
-  if (!users.length) { el.innerHTML = '<div class="rc-empty">🔍 Tidak ada pengguna ditemukan</div>'; return; }
-  el.innerHTML = users.map(u => {
-    const uname = u.username.replace(/'/g,"\\'");
-    const added = rcIsContact(u.username);
-    return `<div class="rc-group-card">
-      <div class="rc-group-avatar">${rcInitial(u.username)}</div>
-      <div class="rc-group-info"><div class="rc-group-name">${rcEscHtml(u.username)}</div></div>
-      <button class="rc-contact-add-btn ${added?'added':''}" onclick="event.stopPropagation(); ${added? `rcRemoveContact('${uname}')` : `rcAddContact('${uname}')`}; rcRenderAddContactResults();">
-        ${added ? '✕ Batalkan' : '➕ Tambah'}
-      </button>
-    </div>`;
-  }).join('');
+  el.innerHTML = id.length === 8
+    ? '<div class="rc-empty">Tekan Cari atau Enter untuk mencari ID ini</div>'
+    : '<div class="rc-empty">🔢 Minta ID 8 digit temanmu, lalu masukkan di sini</div>';
+}
+async function rcSubmitAddContactId(){
+  const el  = document.getElementById('rcAddContactResults');
+  const uid = document.getElementById('rcAddContactInput').value.trim();
+  if (!/^[0-9]{8}$/.test(uid)) { el.innerHTML = '<div class="rc-empty">⚠️ ID harus tepat 8 digit angka</div>'; return; }
+  el.innerHTML = '<div class="rc-empty">⏳ Mencari...</div>';
+  try {
+    const res = await gasRequest({ action: 'findByUserId', userId: uid });
+    if (!res.ok) { el.innerHTML = '<div class="rc-empty">🔍 ' + rcEscHtml(res.msg || 'Pengguna tidak ditemukan') + '</div>'; return; }
+    const me = currentUser ? currentUser.username.toLowerCase() : '';
+    if (res.username.toLowerCase() === me) { el.innerHTML = '<div class="rc-empty">😅 Itu ID kamu sendiri</div>'; return; }
+    rcRenderAddContactFound(res.username, uid);
+  } catch(e) {
+    el.innerHTML = '<div class="rc-empty">❌ Gagal terhubung ke server</div>';
+  }
+}
+function rcRenderAddContactFound(username, uid){
+  const el = document.getElementById('rcAddContactResults');
+  const uname = username.replace(/'/g,"\\'");
+  const added = rcIsContact(username);
+  el.innerHTML = `<div class="rc-group-card">
+    <div class="rc-group-avatar">${rcInitial(username)}</div>
+    <div class="rc-group-info"><div class="rc-group-name">${rcEscHtml(username)}${rcBadgeHtml(username)}</div><div style="font-size:12px;opacity:.6;">ID: ${rcEscHtml(uid)}</div></div>
+    <button class="rc-contact-add-btn ${added?'added':''}" onclick="event.stopPropagation(); ${added? `rcRemoveContact('${uname}')` : `rcAddContact('${uname}')`}; rcRenderAddContactFound('${uname}','${uid}');">
+      ${added ? '✕ Batalkan' : '➕ Tambah'}
+    </button>
+  </div>`;
 }
 
 /* Lihat profil pengguna lain langsung dari daftar kontak, tanpa perlu buka chat dulu */
@@ -6393,6 +6421,7 @@ function rcOpenContactInfo(){
   document.getElementById('rcInfoBio').textContent = localStorage.getItem('talkup_bio_' + rcChatUser) || 'Belum ada info profil';
   document.getElementById('rcNickInput').value = rcGetNickname(rcChatUser);
   rcRenderWallSwatches(true, 'rcInfoWallRow');
+  rcSyncInfoUserId();
 
   const imgs = rcMsgsCache
     .map(m => rcParseEnvelope(m.teks))
@@ -6430,6 +6459,39 @@ function rcSubmitReport(alasan){
   }).catch(() => showPbToast('<i class="ic ic-warning"></i> Gagal terhubung ke server', true));
 }
 
+// Tampilkan ID pengguna di panel info. Untuk diri sendiri: ambil dari currentUser
+// (lokal, tanpa request) dan bisa diketuk untuk disalin. Untuk orang lain: cari
+// ID-nya lewat rcAllUsers (kalau ada di cache) supaya tidak perlu request ekstra;
+// kalau tidak ketemu, baris disembunyikan (tidak menampilkan pesan gagal).
+function rcSyncInfoUserId(){
+  const el = document.getElementById('rcInfoUserId');
+  if (!el || !rcChatUser) return;
+  const me = currentUser ? currentUser.username.toLowerCase() : '';
+  if (rcChatUser.toLowerCase() === me) {
+    const uid = currentUser && currentUser.userId ? currentUser.userId : '';
+    if (!uid) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = '🆔 ID kamu: <b>' + rcEscHtml(uid) + '</b> · ketuk untuk salin';
+    el.onclick = () => rcCopyMyUserId(uid);
+  } else {
+    const found = (rcAllUsers||[]).find(u => u.username.toLowerCase() === rcChatUser.toLowerCase());
+    if (found && found.userId) {
+      el.style.display = '';
+      el.innerHTML = '🆔 ID: ' + rcEscHtml(found.userId);
+      el.onclick = null;
+    } else {
+      el.style.display = 'none';
+    }
+  }
+}
+function rcCopyMyUserId(uid){
+  const doToast = () => showPbToast('<i class="ic ic-checkcircle"></i> ID disalin: ' + rcEscHtml(uid), true);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(uid).then(doToast).catch(doToast);
+  } else {
+    doToast();
+  }
+}
 function rcSyncMenuContactBtn(){
   const btn = document.getElementById('rcContactToggleMenuBtn');
   if (!btn || !rcChatUser) return;
