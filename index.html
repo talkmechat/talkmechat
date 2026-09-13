@@ -1887,6 +1887,7 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
       <input type="file" id="rcAvatarInput" accept="image/*" style="display:none" onchange="rcHandleAvatarSelect(event)">
       <div style="flex:1;min-width:0;">
         <div class="rc-set-uname" id="rcSetUname">-</div>
+        <div id="rcSetUserId" style="font-size:12.5px;color:#8ab; opacity:.85; margin:2px 0 6px; cursor:pointer;" title="Ketuk untuk salin ID"></div>
         <textarea class="rc-set-bio" id="rcSetBio" rows="2" maxlength="80" placeholder="Tulis info singkat tentang kamu..." onblur="rcSaveBio()"></textarea>
       </div>
     </div>
@@ -5413,6 +5414,16 @@ function rcPopulateSettings(){
   if (!currentUser) return;
   document.getElementById('rcSetAvatar').textContent = rcInitial(currentUser.username);
   document.getElementById('rcSetUname').textContent  = currentUser.username;
+  const idEl = document.getElementById('rcSetUserId');
+  if (idEl) {
+    if (currentUser.userId) {
+      idEl.textContent = '🆔 ID: ' + currentUser.userId + ' · ketuk untuk salin';
+      idEl.onclick = () => rcCopyMyUserId(currentUser.userId);
+      idEl.style.display = '';
+    } else {
+      idEl.style.display = 'none';
+    }
+  }
   rcApplyAvatarPhoto();
   document.getElementById('rcSetBio').value = localStorage.getItem('talkup_bio_' + currentUser.username) || '';
   document.getElementById('rcSwNotif').classList.toggle('on', rcGetSetting('notifSound', true));
