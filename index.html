@@ -2487,7 +2487,7 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getDatabase, ref, push, onChildAdded, onChildChanged, onChildRemoved, onValue,
-    update, remove, query, orderByChild, get, set
+    update, remove, query, orderByChild, get, set, runTransaction, limitToLast
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
   const firebaseConfig = {
@@ -2505,7 +2505,7 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
 
   window._fb = {
     ref, push, onChildAdded, onChildChanged, onChildRemoved, onValue,
-    update, remove, query, orderByChild, get, set, db: fbDb
+    update, remove, query, orderByChild, get, set, runTransaction, limitToLast, db: fbDb
   };
   window._fbReady = true;
   window.dispatchEvent(new Event('fb-ready'));
@@ -2550,17 +2550,114 @@ function _rcNextMsgId(){
   _rcLastSendId = now > _rcLastSendId ? now : _rcLastSendId + 1;
   return _rcLastSendId;
 }
+/* Ringkasan pesan untuk INBOX (tanpa base64 gambar/audio — cuma teks pendek).
+   Dipakai penerima untuk mendeteksi pesan baru tanpa mengunduh seluruh riwayat. */
+function rcInboxPreviewText(teksJsonString){
+  let env = null;
+  try { env = JSON.parse(teksJsonString); } catch(e){}
+  if (!env || typeof env !== 'object' || !env.type) return String(teksJsonString || '').slice(0, 40);
+  switch (env.type) {
+    case 'image':   return 'Foto';
+    case 'sticker': return '🌟 Stiker';
+    case 'video':   return 'Video';
+    case 'audio':   return 'Pesan suara';
+    case 'file':    return 'File';
+    case 'viewonce':return 'Foto sekali lihat';
+    case 'location':return 'Lokasi';
+    default:        return String(env.text || '').slice(0, 40);
+  }
+}
+// Tipe "event" (bukan pesan yang perlu muncul di daftar Belum Dibaca)
+function rcIsEventJson(teksJsonString){
+  try { const p = JSON.parse(teksJsonString); return !!p && typeof p === 'object' && rcIsEventType(p); }
+  catch(e){ return false; }
+}
+
 /* Kirim pesan mentah ke Firebase (dipakai roses_send / rcSendRaw / rcSendPayload) */
 async function rcFbSend(from, to, teksJsonString, waktu){
   await rcFbWaitReady();
-  const { ref, push, db } = window._fb;
+  const { ref, push, set, db } = window._fb;
   const path = rcMsgsRefPath(from, to);
   const msgRef = push(ref(db, path));
+  const msgId = _rcNextMsgId(); // dipakai existing code sbg id numerik unik & monoton
   await window._fb.set(msgRef, {
-    id: _rcNextMsgId(), // dipakai existing code sbg id numerik unik & monoton
+    id: msgId,
     from, to, teks: teksJsonString, waktu
   });
+  // 📥 Entri inbox untuk penerima: inbox/{penerima}/{pengirim} -> ringkasan pesan TERBARU.
+  // Satu entri per pasangan (ditimpa), ukurannya kecil & konstan. Pesan bertipe event
+  // (call/reaction/group_invite dll) tidak dicatat supaya tidak memicu notifikasi palsu.
+  if (!rcIsEventJson(teksJsonString)) {
+    try {
+      await set(ref(db, 'inbox/' + String(to).toLowerCase() + '/' + String(from).toLowerCase()), {
+        id: msgId, from: from, waktu: waktu, text: rcInboxPreviewText(teksJsonString)
+      });
+    } catch(e){ /* best-effort: pesan utamanya sudah terkirim */ }
+  }
   return msgRef.key;
+}
+
+/* ══════════════════════════════════════════════════════
+   ✍️ TYPING & ✅ READ RECEIPT — path Firebase TERPISAH dari 'messages'
+   Dulu typing & receipt dikirim sebagai PESAN biasa di node messages/{conv},
+   akibatnya: (1) riwayat membengkak (tiap ketikan = 1 pesan baru), (2) setiap
+   ketikan memicu onValue ulang di kedua sisi. Sekarang:
+     typing/{convKey}/{username}   -> { ts }        (satu nilai, DITIMPA)
+     receipts/{convKey}/{username} -> { upto, ts }  (satu nilai, DITIMPA)
+   Jadi ukuran datanya konstan dan pesan chat tidak ikut terpicu ulang.
+══════════════════════════════════════════════════════ */
+function rcTypingPath(a, b, who){ return 'typing/' + rcConvKey(a, b) + '/' + String(who).toLowerCase(); }
+function rcReceiptPath(a, b, who){ return 'receipts/' + rcConvKey(a, b) + '/' + String(who).toLowerCase(); }
+
+async function rcFbSetTyping(to){
+  try{
+    await rcFbWaitReady();
+    const { ref, set, db } = window._fb;
+    await set(ref(db, rcTypingPath(currentUser.username, to, currentUser.username)), { ts: Date.now() });
+  } catch(e){ /* best-effort */ }
+}
+async function rcFbSetReceipt(to, upto){
+  try{
+    await rcFbWaitReady();
+    const { ref, set, db } = window._fb;
+    await set(ref(db, rcReceiptPath(currentUser.username, to, currentUser.username)), { upto: upto, ts: Date.now() });
+  } catch(e){ /* best-effort */ }
+}
+
+// Status lawan bicara (typing + receipt) disimpan di memori & dipakai render.
+let rcPeerTypingTs = 0;    // waktu terakhir lawan mengetik
+let rcPeerReadUpto = 0;    // id pesan tertinggi yang sudah dibaca lawan
+let rcPeerUnsubs = [];
+function rcDetachPeerListeners(){
+  rcPeerUnsubs.forEach(fn => { try{ fn(); }catch(e){} });
+  rcPeerUnsubs = [];
+  rcPeerTypingTs = 0; rcPeerReadUpto = 0;
+}
+async function rcAttachPeerListeners(me, other){
+  rcDetachPeerListeners();
+  await rcFbWaitReady();
+  const { ref, onValue, db } = window._fb;
+  // dijaga supaya callback dari chat lama tidak menimpa chat yang baru dibuka
+  const forChat = other.toLowerCase();
+  rcPeerUnsubs.push(onValue(ref(db, rcTypingPath(me, other, other)), (snap) => {
+    if (!rcChatUser || rcChatUser.toLowerCase() !== forChat) return;
+    const v = snap.val();
+    rcPeerTypingTs = v && v.ts ? Number(v.ts) : 0;
+    rcUpdateOnlineStatus(rcMsgsCache || []);
+    // 'sedang mengetik...' harus hilang sendiri walau tidak ada update baru
+    clearTimeout(rcAttachPeerListeners._t);
+    if (rcPeerTypingTs) rcAttachPeerListeners._t = setTimeout(() => rcUpdateOnlineStatus(rcMsgsCache || []), 6200);
+  }, () => {}));
+  rcPeerUnsubs.push(onValue(ref(db, rcReceiptPath(me, other, other)), (snap) => {
+    if (!rcChatUser || rcChatUser.toLowerCase() !== forChat) return;
+    const v = snap.val();
+    const up = v && v.upto ? Number(v.upto) : 0;
+    if (up !== rcPeerReadUpto) {
+      rcPeerReadUpto = up;
+      rcLastRenderSig = null; // paksa render ulang supaya centang berubah
+      if (rcMsgsCache && rcMsgsCache.length) rcRenderMessages(rcMsgsCache, false);
+    }
+  }, () => {}));
 }
 
 /* Ambil semua pesan 1x (dipakai beberapa tempat yg butuh snapshot langsung, mis. scan grup) */
@@ -2670,36 +2767,91 @@ function rcInitForceUpdateListener(){
 }
 rcInitForceUpdateListener();
 
-/* ── 🧹 Auto-reset data chat tiap RC_RESET_DAYS hari (dicek tiap kali web dibuka) ──
-   Menghapus SEMUA percakapan di node "messages" Firebase supaya data selalu segar.
+/* ── 🧹 Auto-reset data chat tiap RC_RESET_DAYS hari ──
+   Masalah lama: (1) siapa pun yang membuka app setelah 14 hari langsung menghapus
+   SELURUH percakapan SEMUA orang tanpa peringatan, (2) dua klien yang membuka
+   bersamaan sama-sama lolos cek waktu lalu sama-sama menghapus.
+   Perbaikan:
+   • Reset dua tahap dengan PERINGATAN. Saat sudah jatuh tempo, klien pertama cuma
+     mengumumkan jadwal ('meta/resetNotice' = waktu eksekusi, +RC_RESET_GRACE_HOURS
+     jam ke depan). Semua pengguna yang membuka app melihat banner peringatan.
+     Penghapusan BARU terjadi setelah masa tenggang itu lewat.
+   • Klaim memakai runTransaction (atomik di server Firebase): hanya SATU klien
+     yang berhasil mengklaim pengumuman / eksekusi, klien lain otomatis mundur.
+   • Kalau runTransaction tidak tersedia, TIDAK menghapus apa pun (gagal aman).
    Ini TIDAK menyentuh akun/login/status di Google Sheets, cuma histori chat.
-   PENTING: waktu terakhir reset disimpan di Firebase (shared untuk semua orang),
-   BUKAN di localStorage — karena localStorage itu per-device/per-browser. Kalau
-   disimpan di localStorage, siapa pun yang buka app dari device baru / abis clear
-   cache akan dianggap "belum pernah reset" dan langsung memicu hapus SEMUA chat
-   semua orang seketika itu juga, bukan nunggu 14 hari — itu bug yang bikin chat
-   sering hilang jauh lebih cepat dari jadwal yang diinginkan. */
+   Waktu terakhir reset disimpan di Firebase (bukan localStorage) supaya sama
+   untuk semua orang — localStorage itu per-device. */
+const RC_RESET_GRACE_HOURS = 48; // masa tenggang antara peringatan & penghapusan sungguhan
+
+function rcShowResetBanner(execAt){
+  if (document.getElementById('rcResetBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'rcResetBanner';
+  b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#b45309;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:10px 14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+  const d = new Date(execAt);
+  const when = d.toLocaleString('id-ID', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  b.innerHTML = '⚠️ Semua riwayat chat akan dihapus otomatis pada <b>' + when + '</b>. Simpan pesan penting sebelum itu. ' +
+    '<span style="text-decoration:underline;cursor:pointer;margin-left:8px" onclick="this.parentNode.remove()">Tutup</span>';
+  document.body.appendChild(b);
+}
+
 async function rcMaybeAutoResetChats(){
   try {
     await rcFbWaitReady();
     const { ref, get, set, remove, db } = window._fb;
-    const metaRef = ref(db, 'meta/lastChatReset');
-    const snap = await get(metaRef);
-    const last = snap.exists() ? Number(snap.val()) : 0;
+    const runTransaction = window._fb.runTransaction;
+    const metaRef   = ref(db, 'meta/lastChatReset');
+    const noticeRef = ref(db, 'meta/resetNotice');
     const now = Date.now();
     const intervalMs = RC_RESET_DAYS * 24 * 60 * 60 * 1000;
+    const graceMs    = RC_RESET_GRACE_HOURS * 60 * 60 * 1000;
+
+    const snap = await get(metaRef);
+    const last = snap.exists() ? Number(snap.val()) : 0;
     if (!last) {
-      // belum pernah ada catatan reset sama sekali (baru pertama kali app ini dipakai) —
-      // catat baseline waktu SEKARANG tanpa menghapus apa pun, supaya siklus 14 hari
-      // baru mulai dihitung dari sini, bukan langsung menghapus riwayat yang sudah ada.
+      // baru pertama kali dipakai: catat baseline, JANGAN hapus apa pun
       await set(metaRef, now);
       return;
     }
+
+    // ── ada pengumuman yang sedang berjalan? ──
+    const nSnap = await get(noticeRef);
+    const execAt = nSnap.exists() ? Number(nSnap.val()) : 0;
+    if (execAt && execAt > now) { rcShowResetBanner(execAt); return; } // masih masa tenggang
+
+    if (execAt && execAt <= now) {
+      // masa tenggang habis -> eksekusi. Klaim atomik: hanya 1 klien yang berhasil
+      // mengosongkan 'resetNotice'; yang lain melihat nilai sudah kosong & mundur.
+      if (typeof runTransaction !== 'function') return; // gagal aman: jangan hapus tanpa transaksi
+      const claim = await runTransaction(noticeRef, (cur) => {
+        if (cur && Number(cur) <= Date.now()) return null; // klaim: hapus notice
+        return; // batalkan (sudah diklaim klien lain / bukan giliran kita)
+      });
+      if (!claim.committed) return;
+      await remove(ref(db, 'messages'));
+      await remove(ref(db, 'inbox'));      // indeks ringkasan ikut dibersihkan
+      await remove(ref(db, 'typing'));
+      await remove(ref(db, 'receipts'));
+      await set(metaRef, Date.now());
+      console.log('🧹 Chat auto-reset dijalankan (siklus ' + RC_RESET_DAYS + ' hari)');
+      return;
+    }
+
+    // ── belum ada pengumuman: sudah jatuh tempo? ──
     if ((now - last) < intervalMs) return; // belum waktunya
-    await remove(ref(db, 'messages'));
-    await set(metaRef, now);
-    console.log('🧹 Chat auto-reset dijalankan (siklus ' + RC_RESET_DAYS + ' hari)');
-  } catch(e) { /* diem aja kalau gagal, coba lagi kunjungan berikutnya */ }
+    if (typeof runTransaction !== 'function') return;
+    // umumkan jadwal penghapusan; hanya klien yang pertama berhasil menulis yang "menang"
+    const announce = await runTransaction(noticeRef, (cur) => {
+      if (cur) return; // sudah ada yang mengumumkan -> batalkan
+      return Date.now() + graceMs;
+    });
+    if (announce.committed) rcShowResetBanner(Number(announce.snapshot.val()));
+    else {
+      const again = await get(noticeRef);
+      if (again.exists()) rcShowResetBanner(Number(again.val()));
+    }
+  } catch(e) { /* diam saja kalau gagal, coba lagi kunjungan berikutnya */ }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3321,7 +3473,7 @@ async function enterApp() {
 // kosong selamanya kalau tidak dipaksa cek ulang begini.
 async function rcRefreshMyUserId(){
   try {
-    const url = GAS_URL + '?action=getUsers&origin=' + encodeURIComponent(location.hostname) + '&apiKey=' + encodeURIComponent(API_KEY) + '&q=' + encodeURIComponent(currentUser.username);
+    const url = GAS_URL + '?action=getUsers&origin=' + encodeURIComponent(location.hostname) + '&apiKey=' + encodeURIComponent(API_KEY) + '&token=' + encodeURIComponent(currentUser.token || '') + '&q=' + encodeURIComponent(currentUser.username);
     const res = await fetch(url);
     const list = await res.json();
     const me = Array.isArray(list) ? list.find(u => u.username.toLowerCase() === currentUser.username.toLowerCase()) : null;
@@ -3417,16 +3569,27 @@ function rcParseEnvelope(teks){
 
 /* ── open app (contacts view) ── */
 let rcStatusTimer = null;
+// Saat tab kembali terlihat, langsung cek status akun sekali (interval 25 dtk melewati tab tersembunyi)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentUser && document.getElementById('rcOverlay') &&
+      document.getElementById('rcOverlay').classList.contains('rc-open')) {
+    rcCheckOwnAccountStatus();
+  }
+});
 function rcOpenApp(){
   document.getElementById('rcOverlay').classList.add('rc-open');
   rcShowContacts();
   rcLoadUsers();
   clearInterval(rcStatusTimer);
-  rcStatusTimer = setInterval(rcCheckOwnAccountStatus, 7000);
+  // Dulu tiap 7 dtk (~12.000 panggilan/hari/user ke Apps Script). Sekarang 25 dtk
+  // dan DILEWATI saat tab sedang tidak terlihat — hemat kuota UrlFetch/eksekusi GAS.
+  // (Saat tab kembali aktif, langsung dicek sekali; lihat listener visibilitychange.)
+  rcStatusTimer = setInterval(() => { if (document.visibilityState === 'visible') rcCheckOwnAccountStatus(); }, 25000);
   rcStartInboxScanner();
   rcRequestNotifPermission();
   rcUpdateTitleBadge();
   rcMaybeAutoResetChats(); // 🧹 cek & jalankan reset otomatis histori chat (siklus RC_RESET_DAYS)
+  setTimeout(() => { if (typeof rcCleanupMyExpiredStatuses === 'function') rcCleanupMyExpiredStatuses(); }, 4000);
 }
 function rcClose(){
   clearInterval(rcRefTimer);
@@ -3535,55 +3698,67 @@ function rcUpdateTitleBadge(){
   document.title = count > 0 ? `(${count > 99 ? '99+' : count}) ${RC_TITLE_ORIGINAL}` : RC_TITLE_ORIGINAL;
 }
 
-let rcInboxScanTimer = null;
-let rcInboxScanCursor = 0;
+/* ── 📥 Inbox listener (pengganti polling rcInboxScanStep) ──
+   DULU: tiap 3,5 detik mengunduh SELURUH riwayat 1 user (termasuk gambar base64),
+   bergilir. Dengan N user, pesan baru dari orang tertentu baru ketahuan setelah
+   sampai N×3,5 detik, dan tiap siklus boros bandwidth.
+   SEKARANG: pengirim menulis ringkasan kecil ke inbox/{penerima}/{pengirim} (lihat
+   rcFbSend), dan kita cukup memasang SATU listener onValue di inbox/{kita}.
+   Hasilnya: deteksi instan (real-time), dan yang diunduh hanya ringkasan teks kecil. */
+let rcInboxUnsub = null;
+let rcInboxFirstSnap = true;
 function rcStartInboxScanner(){
-  clearInterval(rcInboxScanTimer);
-  rcInboxScanCursor = 0;
-  rcInboxScanStep(); // langsung jalan sekali saat masuk app
-  rcInboxScanTimer = setInterval(rcInboxScanStep, 3500);
+  rcStopInboxScanner();
+  if (!currentUser) return;
+  rcInboxFirstSnap = true;
+  rcFbWaitReady().then(() => {
+    if (!currentUser) return;
+    const { ref, onValue, db } = window._fb;
+    const meKey = currentUser.username.toLowerCase();
+    rcInboxUnsub = onValue(ref(db, 'inbox/' + meKey), (snap) => {
+      const val = snap.val() || {};
+      const isFirst = rcInboxFirstSnap;
+      rcInboxFirstSnap = false;
+      rcHandleInboxSnapshot(val, isFirst);
+    }, () => { /* SDK akan retry otomatis */ });
+  });
 }
 function rcStopInboxScanner(){
-  clearInterval(rcInboxScanTimer);
+  if (rcInboxUnsub) { try{ rcInboxUnsub(); }catch(e){} rcInboxUnsub = null; }
 }
-async function rcInboxScanStep(){
-  if (!currentUser || !rcAllUsers || !rcAllUsers.length) return;
+function rcHandleInboxSnapshot(val, isFirst){
+  if (!currentUser) return;
   const me = currentUser.username.toLowerCase();
-  const targets = rcAllUsers.filter(u => u.username.toLowerCase() !== me);
-  if (!targets.length) return;
-  // giliran 1 user per tick supaya tidak membanjiri server dengan request paralel
-  if (rcInboxScanCursor >= targets.length) rcInboxScanCursor = 0;
-  const target = targets[rcInboxScanCursor];
-  rcInboxScanCursor++;
-  // skip kalau ini chat yang sedang dibuka (sudah otomatis ke-update oleh rcLoadMessages)
-  if (rcActiveGroup === null && rcChatUser && rcChatUser.toLowerCase() === target.username.toLowerCase()) return;
-  // skip user yang diblokir kita (tidak perlu deteksi pesan darinya)
-  if (typeof rcIsBlocked === 'function' && rcIsBlocked(target.username)) return;
-  try{
-    const msgs = await rcFbGetMessagesOnce(currentUser.username, target.username);
-    if (!msgs || !msgs.length) return;
-    const real = msgs.filter(m => { const env = rcParseEnvelope(m.teks); return !rcIsEventType(env); });
-    if (!real.length) return;
-    const last = real[real.length - 1];
-    const previews = rcGetPreviews();
-    const existing = previews[target.username];
-    if (existing && existing.id >= last.id) return; // tidak ada yang baru
-    const env = rcParseEnvelope(last.teks);
-    let previewText = env.type === 'image' ? 'Foto' : env.type === 'sticker' ? '🌟 Stiker' : env.type === 'video' ? 'Video' : env.type === 'audio' ? 'Pesan suara' : env.type === 'file' ? 'File' : (env.text || last.teks);
-    rcSavePreview(target.username, { text: previewText.slice(0,40), time: last.waktu, id: last.id, from: last.from });
-    // kalau pesan ini dari lawan bicara (bukan dari kita) dan memang belum dibaca, refresh tampilan + notifikasi ringan
-    if (last.from.toLowerCase() !== me) {
-      if (rcCurrentTab === 'chat' && !rcActiveGroup) rcRenderUsers(rcAllUsers);
-      rcUpdateTitleBadge();
-      if (!existing || existing.id < last.id) {
-        const displayName = rcGetNickname(target.username) || target.username;
-        if (typeof showPbToast === 'function') showPbToast('💬 Pesan baru dari ' + displayName);
-        rcPlayNotifSound();
-        rcShowBrowserNotif(displayName, previewText, 'talkme-dm-' + target.username.toLowerCase());
-      }
+  const previews = rcGetPreviews();
+  let changed = false;
+  Object.keys(val).forEach(fromKey => {
+    const item = val[fromKey];
+    if (!item || !item.id) return;
+    const senderName = item.from || fromKey;
+    if (String(senderName).toLowerCase() === me) return;
+    // chat yang sedang dibuka sudah diurus rcRenderMessages
+    if (rcActiveGroup === null && rcChatUser && rcChatUser.toLowerCase() === String(senderName).toLowerCase()) return;
+    if (typeof rcIsBlocked === 'function' && rcIsBlocked(senderName)) return;
+    // cocokkan dengan nama asli di daftar kontak (kunci preview memakai username persis)
+    const known = (rcAllUsers || []).find(u => u.username.toLowerCase() === String(senderName).toLowerCase());
+    const keyName = known ? known.username : senderName;
+    const existing = previews[keyName];
+    if (existing && existing.id >= item.id) return; // tidak ada yang baru
+    rcSavePreview(keyName, { text: String(item.text || '').slice(0,40), time: item.waktu, id: item.id, from: senderName });
+    changed = true;
+    // notifikasi hanya untuk pesan yang benar-benar baru, bukan snapshot awal saat app dibuka
+    if (!isFirst) {
+      const displayName = rcGetNickname(keyName) || keyName;
+      if (typeof showPbToast === 'function') showPbToast('💬 Pesan baru dari ' + displayName);
+      rcPlayNotifSound();
+      rcShowBrowserNotif(displayName, String(item.text || ''), 'talkme-dm-' + String(senderName).toLowerCase());
       if (navigator.vibrate) navigator.vibrate(25);
     }
-  } catch(e) { /* diem aja, coba lagi di tick berikutnya */ }
+  });
+  if (changed) {
+    if (rcCurrentTab === 'chat' && !rcActiveGroup) rcRenderUsers(rcAllUsers);
+    rcUpdateTitleBadge();
+  }
 }
 
 /* ── ⛔ Cek status ban/tban akun sendiri selama sesi aktif (bukan cuma pas login) ──
@@ -3623,7 +3798,7 @@ async function rcCheckOwnAccountStatus(){
 async function rcLoadUsers(){
   try{
     const q = document.getElementById('rcSearch').value.trim();
-    const url = GAS_URL + '?action=getUsers&origin=' + encodeURIComponent(location.hostname) + '&apiKey=' + encodeURIComponent(API_KEY) + (q ? '&q=' + encodeURIComponent(q) : '');
+    const url = GAS_URL + '?action=getUsers&origin=' + encodeURIComponent(location.hostname) + '&apiKey=' + encodeURIComponent(API_KEY) + (currentUser && currentUser.token ? '&token=' + encodeURIComponent(currentUser.token) : '') + (q ? '&q=' + encodeURIComponent(q) : '');
     const res = await fetch(url);
     rcAllUsers = await res.json();
     rcRenderUsers(rcAllUsers);
@@ -3906,7 +4081,7 @@ function rcOpenChat(username){
   sb.style.display = 'none';
   document.getElementById('rcChatSearchInput').value = '';
   clearInterval(rcRefTimer);
-  rcAttachDmListener(currentUser.username, username);
+  rcAttachDmListener(currentUser.username, username); // sekaligus memasang listener typing/receipt
   rcApplyWallpaperForChat();
 }
 /* ── 🔴 listener real-time (bukan polling) supaya pesan masuk instan kayak WhatsApp ── */
@@ -3914,10 +4089,12 @@ let rcDmUnsub = null;
 let rcDmListenerFirst = true;
 function rcDetachDmListener(){
   if (rcDmUnsub) { try{ rcDmUnsub(); }catch(e){} rcDmUnsub = null; }
+  rcDetachPeerListeners();
 }
 async function rcAttachDmListener(me, other){
   rcDetachDmListener();
   await rcFbWaitReady();
+  rcAttachPeerListeners(me, other); // typing & receipt di path terpisah (poin #18)
   rcDmListenerFirst = true;
   const { ref, onValue, db } = window._fb;
   rcDmUnsub = onValue(ref(db, rcMsgsRefPath(me, other)), (snap) => {
@@ -4134,19 +4311,10 @@ async function rcSendRaw(to, payload){
 function rcUpdateOnlineStatus(allMsgs){
   const subEl = document.getElementById('rcTopbarSub');
   if (!subEl || !rcChatUser) return;
-  const typingMsgs = allMsgs.filter(m => {
-    if (m.from.toLowerCase() !== rcChatUser.toLowerCase()) return false;
-    const p = rcParseEnvelope(m.teks);
-    return p.type === 'typing';
-  });
-  if (typingMsgs.length) {
-    const lastTyping = typingMsgs[typingMsgs.length - 1];
-    const p = rcParseEnvelope(lastTyping.teks);
-    if (p.ts && (Date.now() - p.ts) < 6000) {
-      subEl.innerHTML = '<span class="rc-typing-dots"><span></span><span></span><span></span></span>sedang mengetik...';
-      subEl.classList.add('rc-online');
-      return;
-    }
+  if (rcPeerTypingTs && (Date.now() - rcPeerTypingTs) < 6000) {
+    subEl.innerHTML = '<span class="rc-typing-dots"><span></span><span></span><span></span></span>sedang mengetik...';
+    subEl.classList.add('rc-online');
+    return;
   }
   if (!rcGetSetting('showLastSeen', true)) { subEl.textContent = 'TalkMe'; subEl.classList.remove('rc-online'); return; }
   const fromOther = allMsgs.filter(m => m.from.toLowerCase() === rcChatUser.toLowerCase());
@@ -4168,7 +4336,7 @@ function rcNotifyTyping(){
   const now = Date.now();
   if (now - rcLastTypingSent < 2500) return;
   rcLastTypingSent = now;
-  rcSendRaw(rcChatUser, { type:'typing', ts: now });
+  rcFbSetTyping(rcChatUser); // path terpisah 'typing/', BUKAN pesan di 'messages/'
 }
 
 function rcMaybeSendReadReceipt(visibleMsgs){
@@ -4181,7 +4349,7 @@ function rcMaybeSendReadReceipt(visibleMsgs){
   const alreadySent = parseInt(localStorage.getItem(key) || '0');
   if (maxId > alreadySent) {
     localStorage.setItem(key, maxId);
-    rcSendRaw(rcChatUser, { type:'receipt', upto: maxId });
+    rcFbSetReceipt(rcChatUser, maxId); // path terpisah 'receipts/', BUKAN pesan di 'messages/'
   }
 }
 
@@ -4250,13 +4418,15 @@ function rcRenderMessages(msgs, scrollDown){
     localStorage.setItem('rc_seen_' + rcChatUser, latestId);
   }
 
-  /* centang baca: cari sampai id mana lawan bicara sudah membaca pesan kita */
-  const receiptsFromOther = msgs.filter(m => {
+  /* centang baca: id tertinggi yang sudah dibaca lawan, dari path 'receipts/' (lihat rcAttachPeerListeners).
+     Receipt lama yang masih ada di riwayat 'messages' (sebelum pemisahan path) tetap dihormati. */
+  const legacyReceipts = msgs.filter(m => {
     const p = rcParseEnvelope(m.teks);
     return p.type === 'receipt' && m.from.toLowerCase() === rcChatUser.toLowerCase();
   });
-  const readUpto = receiptsFromOther.length
-    ? Math.max(...receiptsFromOther.map(m => rcParseEnvelope(m.teks).upto || 0)) : 0;
+  const legacyUpto = legacyReceipts.length
+    ? Math.max(...legacyReceipts.map(m => rcParseEnvelope(m.teks).upto || 0)) : 0;
+  const readUpto = Math.max(rcPeerReadUpto || 0, legacyUpto);
 
   /* reaksi emoji per pesan */
   const reactions = {};
@@ -4868,27 +5038,11 @@ async function rcDeleteMsg(id, isSent, canDeleteForEveryone) {
   showPbToast('<i class=&quot;ic ic-trash&quot;></i> Pesan dihapus untuk saya', true);
 }
 
-/* ── notif sound ── */
-function playNotifSound() {
-  if (!rcGetSetting('notifSound', true)) return;
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc  = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
-    osc.type  = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc2.type = 'sine'; osc2.frequency.setValueAtTime(1100, ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
-    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 0.18);
-    gain.gain.setValueAtTime(0, ctx.currentTime + 0.18);
-    gain.gain.linearRampToValueAtTime(0.1,  ctx.currentTime + 0.20);
-    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 0.35);
-    osc.start(ctx.currentTime);  osc.stop(ctx.currentTime + 0.2);
-    osc2.start(ctx.currentTime + 0.12); osc2.stop(ctx.currentTime + 0.4);
-  } catch(e) { /* silent */ }
-}
+/* ── notif sound ──
+   playNotifSound dulu membuat AudioContext BARU di setiap panggilan (dan tidak
+   pernah di-close), sehingga lama-lama kena batas jumlah AudioContext browser.
+   Sekarang cuma alias ke rcPlayNotifSound, yang memakai satu AudioContext bersama. */
+function playNotifSound() { rcPlayNotifSound(); }
 
 /* ── countdown updater ── */
 let _rcCountdownTimer = null;
@@ -6095,8 +6249,38 @@ function rcRenderMyStatusRow(){
     plus.textContent = '+';
   }
 }
+/* 🧹 Bersihkan status KEDALUWARSA di Firebase (poin #16).
+   Dulu status >24 jam cuma disembunyikan di klien, tapi tetap tersimpan di
+   statuses/ — foto base64 (bisa ratusan KB per status) menumpuk terus dan
+   menguras kuota database. Sekarang tiap pengguna membersihkan status
+   MILIKNYA SENDIRI yang sudah lewat TTL (beserta data 'dilihat oleh'-nya).
+   Sengaja hanya milik sendiri: Firebase rules umumnya mengizinkan orang menulis
+   ke path-nya sendiri, dan menghindari dua klien saling berebut menghapus data
+   orang lain. Karena semua pengguna melakukannya saat membuka tab Update / app,
+   status semua orang akhirnya ikut terbersihkan. */
+async function rcCleanupMyExpiredStatuses(){
+  try{
+    if (!currentUser) return;
+    await rcFbWaitReady();
+    const { ref, get, remove, db } = window._fb;
+    const snap = await get(ref(db, 'statuses/' + currentUser.username));
+    if (!snap.exists()) return;
+    const val = snap.val() || {};
+    const now = Date.now();
+    const tasks = [];
+    Object.keys(val).forEach(key => {
+      const st = val[key];
+      if (!st || !st.ts || (now - Number(st.ts)) >= RC_STATUS_TTL_MS) {
+        tasks.push(remove(ref(db, 'statuses/' + currentUser.username + '/' + key)));
+        tasks.push(remove(ref(db, 'statusViews/' + currentUser.username + '/' + key)));
+      }
+    });
+    if (tasks.length) await Promise.all(tasks);
+  } catch(e){ /* best-effort, coba lagi di kunjungan berikutnya */ }
+}
 async function rcLoadStatuses(){
   rcRenderMyStatusRow();
+  rcCleanupMyExpiredStatuses(); // tidak di-await: jangan menghambat render daftar status
   const listEl = document.getElementById('rcOtherStatusList');
   const lbl = document.getElementById('rcOtherStatusLbl');
   const note = document.getElementById('rcStatusNote');
