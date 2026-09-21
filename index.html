@@ -2541,6 +2541,15 @@ async function rcFbWaitReady(){
   await new Promise(res => window.addEventListener('fb-ready', res, { once:true }));
 }
 
+// Penghitung lokal supaya id numerik yg dihasilkan dalam ms yang sama tetap
+// monoton naik (bug #8: dulu +random(0..999) bikin urutan bisa kebalik
+// 40,5% dari waktu saat jeda kirim ~100ms, terutama di loop kirim grup).
+let _rcLastSendId = 0;
+function _rcNextMsgId(){
+  const now = Date.now();
+  _rcLastSendId = now > _rcLastSendId ? now : _rcLastSendId + 1;
+  return _rcLastSendId;
+}
 /* Kirim pesan mentah ke Firebase (dipakai roses_send / rcSendRaw / rcSendPayload) */
 async function rcFbSend(from, to, teksJsonString, waktu){
   await rcFbWaitReady();
@@ -2548,7 +2557,7 @@ async function rcFbSend(from, to, teksJsonString, waktu){
   const path = rcMsgsRefPath(from, to);
   const msgRef = push(ref(db, path));
   await window._fb.set(msgRef, {
-    id: Date.now() + Math.floor(Math.random()*1000), // dipakai existing code sbg id numerik unik
+    id: _rcNextMsgId(), // dipakai existing code sbg id numerik unik & monoton
     from, to, teks: teksJsonString, waktu
   });
   return msgRef.key;
@@ -2778,6 +2787,8 @@ function rcCompressImageToBase64(file, maxDim, quality){
 
 /* ── Auth state ── */
 let currentUser = JSON.parse(localStorage.getItem('rst_user') || 'null');
+/* Sesi dari versi lama (belum punya token server) dianggap tidak valid → login ulang sekali. */
+if (currentUser && !currentUser.token) { currentUser = null; localStorage.removeItem('rst_user'); }
 
 /* ══════════════════════════════════════════════════════
    ☁️ SINKRONISASI DATA AKUN (kontak, grup, favorit, blokir,
@@ -3083,13 +3094,22 @@ function rcCloseBannedScreen(){
   if (typeof switchAuthTab === 'function') switchAuthTab('register');
 }
 
+function rcHandleAuthError(res){
+  if (res && res.authError && currentUser) {
+    currentUser = null; localStorage.removeItem('rst_user');
+    alert('Sesi kamu berakhir, silakan login lagi.');
+    location.reload();
+  }
+  return res;
+}
 async function gasRequest(params) {
   params.origin = location.hostname;
   params.apiKey = API_KEY;
+  if (currentUser && currentUser.token) params.token = currentUser.token;
   const url = GAS_URL + '?' + new URLSearchParams(params).toString();
   const res  = await fetch(url);
   if (!res.ok) throw new Error('Network error');
-  return await res.json();
+  return rcHandleAuthError(await res.json());
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3180,7 +3200,7 @@ async function doLogin() {
       return;
     }
     if (res.ok) {
-      currentUser = { username: res.username, userId: res.userId || '' };
+      currentUser = { username: res.username, userId: res.userId || '', token: res.token || '' };
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3249,7 +3269,7 @@ async function doRegister() {
   const errEl    = document.getElementById('authErr');
   if (!username || !password) { errEl.textContent = '⚠️ Isi semua kolom ya!'; return; }
   if (password !== pass2) { errEl.textContent = '❌ Password tidak cocok!'; return; }
-  if (username.length < 3) { errEl.textContent = '⚠️ Username minimal 3 karakter!'; return; }
+  if (!RC_USERNAME_RE.test(username)) { errEl.textContent = '⚠️ Username 3–20 karakter: huruf, angka, titik, _ atau - saja.'; return; }
   if (password.length < 4) { errEl.textContent = '⚠️ Password minimal 4 karakter!'; return; }
   if (!rcTurnstileToken) {
     errEl.textContent = '⚠️ Selesaikan dulu verifikasi keamanan di atas.';
@@ -3262,7 +3282,7 @@ async function doRegister() {
     const res = await gasRequest({ action: 'register', username, password, cfToken: rcTurnstileToken });
     rcResetHumanCheck();
     if (res.ok) {
-      currentUser = { username: res.username, userId: res.userId || '' };
+      currentUser = { username: res.username, userId: res.userId || '', token: res.token || '' };
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3324,7 +3344,22 @@ let rcMsgsCache   = [];
 let rcReplyTarget = null;
 
 function rcInitial(n){ return (n||'?').charAt(0).toUpperCase(); }
-function rcEscHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rcEscHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+/* Nilai aman untuk disisipkan di dalam onclick="fn('...')" : string literal JS yang benar
+   (backslash, kutip, newline di-escape), LALU di-escape HTML. Pakai ini, BUKAN replace(/'/g,...) manual. */
+function rcJsAttr(s){
+  const js = String(s==null?'':s)
+    .replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r')
+    .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+  return rcEscHtml(js);
+}
+/* URL media aman: hanya data:image/audio, https:, blob:. Selain itu dikosongkan (cegah javascript: dsb). */
+function rcSafeUrl(u){
+  const v = String(u==null?'':u).trim();
+  return /^(data:(image|audio)\/[a-z0-9.+-]+;base64,|https:\/\/|blob:)/i.test(v) ? v : '';
+}
+/* Whitelist username — sama dengan aturan server. */
+const RC_USERNAME_RE = /^[A-Za-z0-9_.-]{3,20}$/;
 /* ── ✅ Status akun (kolom "Info" di sheet): trusted / ban / tban / kosong(normal) ── */
 function rcAccountInfo(username){
   const u = rcAllUsers.find(x => x.username.toLowerCase() === (username||'').toLowerCase());
@@ -3645,7 +3680,7 @@ function rcContactClick(username){
 /* ── 📇 Menu aksi cepat per kontak (tekan & tahan): sematkan, tambah/batal kontak, bisukan, arsip ── */
 function rcOpenContactQuickMenu(username){
   if (navigator.vibrate) navigator.vibrate(30);
-  const uname   = username.replace(/'/g,"\\'");
+  const uname   = rcJsAttr(username);
   const isFav   = rcGetFavorites().includes(username);
   const isCon   = rcIsContact(username);
   const isMuted = rcIsMuted(username);
@@ -3701,7 +3736,7 @@ function rcContactCard(u, preview, me, isPinned){
         ${isPinned ? '<span class="rc-pin-icon">📌</span>' : (unread && !muted ? '<span class="rc-unread-dot"></span>' : '')}
       </div>
     </div>`;
-  const uname = u.username.replace(/'/g,"\\'");
+  const uname = rcJsAttr(u.username);
   return `
     <div class="rc-contact ${unread?'unread':''}"
       onclick="rcContactClick('${uname}')"
@@ -4255,7 +4290,7 @@ function rcRenderMessages(msgs, scrollDown){
       if (parsed.type === 'image') {
         const src = String(parsed.src||'');
         const capHtml = parsed.caption ? `<div class="rc-img-caption">${rcEscHtml(parsed.caption)}</div>` : '';
-        bodyHtml = `<img src="${src}" class="rc-msg-img" onclick="rcOpenLightbox('${src.replace(/'/g,"\\'")}')">${capHtml}`;
+        bodyHtml = `<img src="${rcEscHtml(rcSafeUrl(src))}" class="rc-msg-img" onclick="rcOpenLightbox('${rcJsAttr(rcSafeUrl(src))}')">${capHtml}`;
         searchText = 'gambar foto ' + (parsed.caption||'').toLowerCase();
       } else if (parsed.type === 'sticker') {
         bodyHtml = `<div style="font-size:3.4rem;line-height:1;">${parsed.emoji||'🌟'}</div>`;
@@ -4274,7 +4309,7 @@ function rcRenderMessages(msgs, scrollDown){
         if (alreadyOpened) {
           bodyHtml = `<div class="rc-viewonce-card opened">🔒 <span>${isSent ? 'Foto sekali lihat terkirim' : 'Foto sudah dilihat'}</span></div>`;
         } else {
-          bodyHtml = `<div class="rc-viewonce-card" onclick="rcOpenViewOnce(${m.id},'${String(parsed.src).replace(/'/g,"\\'")}')">🔒 <span>Ketuk untuk lihat foto (sekali lihat)</span></div>`;
+          bodyHtml = `<div class="rc-viewonce-card" onclick="rcOpenViewOnce(${m.id},'${rcJsAttr(rcSafeUrl(parsed.src))}')">🔒 <span>Ketuk untuk lihat foto (sekali lihat)</span></div>`;
         }
         searchText = 'foto sekali lihat';
       } else {
@@ -4420,6 +4455,13 @@ function rcCompressImage(file){
 let rcVoiceRecorder = null, rcVoiceChunks = [], rcVoiceStream = null;
 let rcVoiceStartMs = 0, rcVoiceTimerRef = null, rcVoiceRecording = false;
 const RC_VOICE_MAX_SEC = 120;
+// Batas panjang dataUrl (base64) hasil rekaman. Sebelumnya 90000 karakter yg,
+// pada bitrate default MediaRecorder, kepotong di ~4-22 detik — jauh di bawah
+// RC_VOICE_MAX_SEC (120 detik) yang dijanjikan ke user (bug #9). Dengan
+// audioBitsPerSecond 16000 (di-set saat mulai rekam, lihat rcStartVoiceRecord)
+// ukuran mentah untuk 120 detik ± 240KB -> base64 ± 320KB, jadi limitnya
+// dilonggarkan ke 400000 karakter dengan sedikit ruang aman.
+const RC_VOICE_MAX_DATAURL_LEN = 400000;
 
 function rcUpdateSendBtnMode(){
   const input = document.getElementById('rcMsgInput');
@@ -4448,10 +4490,18 @@ async function rcStartVoiceRecord(){
   for (const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']) {
     if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
   }
+  // audioBitsPerSecond dibatasi 16kbps supaya 120 detik rekaman tetap muat di
+  // bawah RC_VOICE_MAX_DATAURL_LEN (bug #9). Kalau browser menolak opsi ini,
+  // fallback ke default tanpa opsi tsb.
+  const recOpts = Object.assign({}, mimeType ? { mimeType } : {}, { audioBitsPerSecond: 16000 });
   try {
-    rcVoiceRecorder = mimeType ? new MediaRecorder(rcVoiceStream, { mimeType }) : new MediaRecorder(rcVoiceStream);
+    rcVoiceRecorder = new MediaRecorder(rcVoiceStream, recOpts);
   } catch(e){
-    showPbToast('Gagal memulai rekaman'); rcVoiceStream.getTracks().forEach(t=>t.stop()); return;
+    try {
+      rcVoiceRecorder = mimeType ? new MediaRecorder(rcVoiceStream, { mimeType }) : new MediaRecorder(rcVoiceStream);
+    } catch(e2){
+      showPbToast('Gagal memulai rekaman'); rcVoiceStream.getTracks().forEach(t=>t.stop()); return;
+    }
   }
   rcVoiceRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) rcVoiceChunks.push(e.data); };
   rcVoiceRecorder.onstop = rcHandleVoiceStopped;
@@ -4487,13 +4537,17 @@ function rcCancelVoiceRecord(){
   rcStopVoiceRecord(false);
 }
 async function rcHandleVoiceStopped(){
-  const durationSec = Math.max(1, Math.round((Date.now() - rcVoiceStartMs) / 1000));
+  // Ukur durasi mentah SEBELUM dibulatkan/di-floor, supaya cek "terlalu pendek"
+  // bisa benar-benar kena (dulu Math.max(1,...) diterapkan lebih dulu sehingga
+  // durationSec tidak pernah < 1 — cek itu jadi dead code).
+  const rawSec = (Date.now() - rcVoiceStartMs) / 1000;
+  const durationSec = Math.max(1, Math.round(rawSec));
   const send = rcVoiceShouldSend;
   const chunks = rcVoiceChunks;
   const mime = (rcVoiceRecorder && rcVoiceRecorder.mimeType) || 'audio/webm';
   rcExitVoiceUI();
   if (!send || !chunks.length) return;
-  if (durationSec < 1) { showPbToast('Rekaman terlalu pendek'); return; }
+  if (rawSec < 1) { showPbToast('Rekaman terlalu pendek'); return; }
   const blob = new Blob(chunks, { type: mime });
   try {
     const dataUrl = await new Promise((resolve, reject) => {
@@ -4502,7 +4556,7 @@ async function rcHandleVoiceStopped(){
       reader.onerror = () => reject(new Error('read failed'));
       reader.readAsDataURL(blob);
     });
-    if (dataUrl.length > 90000) { showPbToast('Rekaman terlalu panjang, coba yang lebih singkat'); return; }
+    if (dataUrl.length > RC_VOICE_MAX_DATAURL_LEN) { showPbToast('Rekaman terlalu panjang, coba yang lebih singkat'); return; }
     const payload = { type:'audio', src: dataUrl, duration: durationSec };
     if (rcActiveGroup) { await rcSendGroupVoice(payload); } else { await rcSendPayload(payload); }
   } catch(e){
@@ -4580,7 +4634,7 @@ function rcVoiceWaveBars(id){
 }
 function rcVoiceMsgHtml(id, src, durationSec){
   const durTxt = rcFmtVoiceDur(durationSec);
-  const safeSrc = String(src||'').replace(/'/g,"\\'");
+  const safeSrc = rcJsAttr(rcSafeUrl(src));
   const bars = rcVoiceWaveBars(id);
   const waveHtml = bars.map((h,i) => `<span class="rc-wavebar" id="rcwave-${id}-${i}" style="height:${h}%;"></span>`).join('');
   return `<div class="rc-voice-msg">
@@ -5031,7 +5085,7 @@ async function rcSubmitAddContactId(){
 }
 function rcRenderAddContactFound(username, uid){
   const el = document.getElementById('rcAddContactResults');
-  const uname = username.replace(/'/g,"\\'");
+  const uname = rcJsAttr(username);
   const added = rcIsContact(username);
   el.innerHTML = `<div class="rc-group-card">
     <div class="rc-group-avatar">${rcInitial(username)}</div>
@@ -5254,9 +5308,15 @@ async function rcLoadGroupMessages(scrollDown){
       }
     }
   } catch(e){ /* silent */ }
+  // Dedupe pakai _fbKey (unik per baris di Firebase) alih-alih from|waktu|teks,
+  // supaya 2 pesan identik ("ok","ok") dari orang sama dalam 1 menit tidak
+  // dianggap duplikat dan hilang (bug #7). Fallback ke id numerik kalau _fbKey
+  // entah kenapa tidak ada.
   const seen = new Set();
-  merged = merged.filter(m => { const k = m.from+'|'+m.waktu+'|'+m.teks; if (seen.has(k)) return false; seen.add(k); return true; });
-  merged.sort((a,b) => rcParseWaktu(a.waktu) - rcParseWaktu(b.waktu));
+  merged = merged.filter(m => { const k = m._fbKey || (m.from+'|'+m.id); if (seen.has(k)) return false; seen.add(k); return true; });
+  // Urutkan pakai id numerik (yg sekarang monoton, lihat rcFbSend) sbg kunci utama,
+  // waktu (menit) sbg fallback kalau id tidak ada — bug #8.
+  merged.sort((a,b) => (a.id||0) - (b.id||0) || (rcParseWaktu(a.waktu) - rcParseWaktu(b.waktu)));
   rcGroupMsgCache = merged;
   rcRenderGroupMessages(merged, scrollDown);
 }
@@ -5267,7 +5327,7 @@ function rcRenderGroupMessages(msgs, scrollDown){
   area.innerHTML = msgs.map(m => {
     const p = rcParseEnvelope(m.teks);
     const isSent = m.from.toLowerCase() === me;
-    const body = p.type === 'image' ? `<img src="${p.src}" style="max-width:100%;border-radius:10px;" onclick="rcOpenLightbox('${String(p.src).replace(/'/g,"\\'")}')">`
+    const body = p.type === 'image' ? `<img src="${rcEscHtml(rcSafeUrl(p.src))}" style="max-width:100%;border-radius:10px;" onclick="rcOpenLightbox('${rcJsAttr(rcSafeUrl(p.src))}')">`
       : p.type === 'audio' ? rcVoiceMsgHtml(m.id, p.src, p.duration)
       : rcEscHtml(p.text||'');
     return `<div class="rc-bwrap ${isSent?'sent':'received'}">
@@ -5475,20 +5535,76 @@ function rcClearCache(){
   rcRenderUsers(rcAllUsers);
 }
 /* ══ BACKUP & RESTORE DATA ══ */
+// Pindahkan 1 node Firebase dari path lama ke path baru (copy lalu hapus yang lama).
+// Aman dipakai berulang: kalau source tidak ada, tidak melakukan apa-apa.
+async function _rcMoveFbNode(oldPath, newPath){
+  const { ref, get, set, remove, db } = window._fb;
+  const snap = await get(ref(db, oldPath));
+  if (!snap.exists()) return;
+  await set(ref(db, newPath), snap.val());
+  await remove(ref(db, oldPath));
+}
+// Migrasi semua data Firebase & localStorage yang ter-key username lama ke
+// username baru setelah ganti username berhasil di server (bug #10: dulu data
+// ini sama sekali tidak dipindah, jadi kontak/blokir/chat lama praktis hilang).
+async function rcMigrateAccountData(oldUsername, newUsername){
+  await rcFbWaitReady();
+  const { ref, get, db } = window._fb;
+
+  // 1) userdata/{username} — kontak, grup, favorit, blokir, dll (satu node saja)
+  try { await _rcMoveFbNode(rcCloudUserPath(oldUsername), rcCloudUserPath(newUsername)); } catch(e){ /* lanjut, jangan gagal total */ }
+
+  // 2) statuses/{username} — status/story milik akun ini
+  try { await _rcMoveFbNode('statuses/' + oldUsername, 'statuses/' + newUsername); } catch(e){}
+
+  // 3) messages/{a__b} — pindai semua percakapan yang melibatkan username lama.
+  //    Path percakapan dibentuk dari rcConvKey (gabungan 2 username terurut),
+  //    jadi cari semua node "messages" yg salah satu sisinya = username lama.
+  try {
+    const msgsSnap = await get(ref(db, 'messages'));
+    if (msgsSnap.exists()) {
+      const oldLower = oldUsername.toLowerCase();
+      const convKeys = Object.keys(msgsSnap.val());
+      for (const convKey of convKeys) {
+        const parts = convKey.split('__');
+        if (parts.length !== 2 || !parts.includes(oldLower)) continue;
+        const other = parts.find(p => p !== oldLower);
+        const newKey = rcConvKey(newUsername, other);
+        await _rcMoveFbNode('messages/' + convKey, 'messages/' + newKey);
+      }
+    }
+  } catch(e){ /* gagal migrasi pesan jangan sampai bikin ganti username gatot total */ }
+
+  // 4) localStorage yang ter-key username lama -> tulis ulang dengan username baru
+  const oldSuffix = oldUsername; // konsisten dgn cara key dibentuk ('prefix' + username asli, case-sensitive di beberapa tempat)
+  RC_SYNC_PREFIXES.forEach(p => {
+    for (const cand of [oldUsername, oldUsername.toLowerCase()]) {
+      const oldKey = p + cand;
+      const val = localStorage.getItem(oldKey);
+      if (val !== null) { localStorage.setItem(p + newUsername, val); localStorage.removeItem(oldKey); }
+    }
+  });
+  ['talkup_wallpaper_'].forEach(()=>{}); // (per-contact wallpaper keys tidak berubah, itu key lawan bicara bukan diri sendiri)
+}
 function rcChangeUsername(){
   if (!currentUser) return;
   const newUsername = prompt('Username baru:', currentUser.username);
   if (!newUsername || !newUsername.trim() || newUsername.trim() === currentUser.username) return;
   const password = prompt('Masukkan password kamu untuk konfirmasi:');
   if (!password) return;
+  const oldUsername = currentUser.username;
   showPbToast('<i class=&quot;ic ic-hourglass&quot;></i> Memproses ganti username...', true);
   fetch(GAS_URL, {
     method: 'POST',
-    body: JSON.stringify({ action: 'change_username', oldUsername: currentUser.username, newUsername: newUsername.trim(), password, origin: location.hostname, apiKey: API_KEY })
-  }).then(r => r.json()).then(res => {
+    body: JSON.stringify({ action: 'change_username', newUsername: newUsername.trim(), password, token: currentUser.token, origin: location.hostname, apiKey: API_KEY })
+  }).then(r => r.json()).then(rcHandleAuthError).then(async res => {
     if (res.ok) {
-      currentUser = { username: res.username };
+      // userId & token dipertahankan (fitur "salin ID" tetap jalan tanpa reload).
+      currentUser = { username: res.username, userId: currentUser.userId || '', token: res.token || currentUser.token };
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
+      showPbToast('<i class=&quot;ic ic-hourglass&quot;></i> Memindahkan data chat & kontak...', true);
+      try { await rcMigrateAccountData(oldUsername, res.username); }
+      catch(e) { /* username sudah pasti berhasil diganti di server; migrasi data best-effort */ }
       rcPopulateSettings();
       showPbToast('<i class=&quot;ic ic-checkcircle&quot;></i> Username berhasil diganti jadi ' + rcEscHtml(res.username), true);
     } else {
@@ -5503,8 +5619,8 @@ function rcSendFeedback(){
   if (!pesan || !pesan.trim()) return;
   fetch(GAS_URL, {
     method: 'POST',
-    body: JSON.stringify({ action: 'send_feedback', username: currentUser.username, pesan: pesan.trim(), origin: location.hostname, apiKey: API_KEY })
-  }).then(r => r.json()).then(()=> showPbToast('<i class=&quot;ic ic-checkcircle&quot;></i> Masukan terkirim, terima kasih!', true))
+    body: JSON.stringify({ action: 'send_feedback', pesan: pesan.trim(), token: currentUser.token, origin: location.hostname, apiKey: API_KEY })
+  }).then(r => r.json()).then(rcHandleAuthError).then(res => showPbToast(res && res.ok ? '<i class=&quot;ic ic-checkcircle&quot;></i> Masukan terkirim, terima kasih!' : '<i class=&quot;ic ic-warning&quot;></i> ' + rcEscHtml((res && res.msg) || 'Gagal mengirim masukan'), true))
     .catch(()=> showPbToast('<i class=&quot;ic ic-warning&quot;></i> Gagal mengirim masukan', true));
 }
 
@@ -5519,8 +5635,8 @@ function rcOpenBroadcast(){
   showPbToast('<i class=&quot;ic ic-hourglass&quot;></i> Mengirim siaran ke ' + targets.length + ' orang...', true);
   fetch(GAS_URL, {
     method: 'POST',
-    body: JSON.stringify({ action: 'broadcast_send', from: currentUser.username, teks: teks.trim(), targets, origin: location.hostname, apiKey: API_KEY })
-  }).then(r => r.text()).then(()=> showPbToast('<i class=&quot;ic ic-checkcircle&quot;></i> Siaran terkirim ke ' + targets.length + ' orang', true))
+    body: JSON.stringify({ action: 'broadcast_send', teks: teks.trim(), targets, token: currentUser.token, origin: location.hostname, apiKey: API_KEY })
+  }).then(r => r.json()).then(rcHandleAuthError).then(res => showPbToast(res && res.ok ? '<i class=&quot;ic ic-checkcircle&quot;></i> Siaran terkirim ke ' + targets.length + ' orang' : '<i class=&quot;ic ic-warning&quot;></i> ' + rcEscHtml((res && res.msg) || 'Gagal mengirim siaran'), true))
     .catch(()=> showPbToast('<i class=&quot;ic ic-warning&quot;></i> Gagal mengirim siaran', true));
 }
 
@@ -6014,7 +6130,7 @@ async function rcLoadStatuses(){
       const arr = byUser[u];
       const last = arr[arr.length-1];
       const allSeen = arr.every(s => viewed.includes(s.username + '|' + s.ts));
-      return `<div class="rc-status-item" onclick="rcOpenStory(rcStatusCache['${u.replace(/'/g,"\\'")}'], 0, false)">
+      return `<div class="rc-status-item" onclick="rcOpenStory(rcStatusCache['${rcJsAttr(u)}'], 0, false)">
         <div class="rc-status-ring ${allSeen?'seen':''}"><div class="rc-status-ring-inner">${rcInitial(u)}</div></div>
         <div><div class="rc-status-name">${rcEscHtml(u)}${arr.length>1?' ('+arr.length+')':''}</div><div class="rc-status-time">${rcTimeAgo(last.ts)}</div></div>
       </div>`;
@@ -6206,7 +6322,7 @@ function rcOpenArchived(){
   const list = document.getElementById('rcArchivedList');
   if (!arch.length) { list.innerHTML = '<div class="rc-empty">🗄️ Belum ada chat yang diarsipkan</div>'; return; }
   list.innerHTML = arch.map(u => `
-    <div class="rc-archive-item" onclick="rcOpenChat('${u.replace(/'/g,"\\'")}')">
+    <div class="rc-archive-item" onclick="rcOpenChat('${rcJsAttr(u)}')">
       <div class="rc-avatar">${rcInitial(u)}</div>
       <div style="flex:1;"><div class="rc-contact-name">${rcEscHtml(rcGetNickname(u)||u)}</div><div class="rc-contact-sub">Ketuk untuk membuka</div></div>
     </div>`).join('');
@@ -6300,7 +6416,7 @@ function rcOpenStarred(){
   list.innerHTML = inThisChat.map(m => {
     const p = rcParseEnvelope(m.teks);
     const txt = p.type === 'image' ? '📷 Gambar' : p.type === 'sticker' ? '🌟 Stiker' : (p.text||'');
-    return `<div class="rc-star-item" style="cursor:pointer;" onclick="document.getElementById('rcStarredView').classList.remove('show'); rcOpenChat('${rcChatUser.replace(/'/g,"\\'")}');">
+    return `<div class="rc-star-item" style="cursor:pointer;" onclick="document.getElementById('rcStarredView').classList.remove('show'); rcOpenChat('${rcJsAttr(rcChatUser)}');">
       <div class="rc-avatar">${rcInitial(m.from)}</div>
       <div style="flex:1;min-width:0;">
         <div class="rc-star-text">${rcEscHtml(m.from)}</div>
@@ -6470,7 +6586,7 @@ function rcOpenContactInfo(){
     .slice(-12).reverse();
   const grid = document.getElementById('rcInfoMediaGrid');
   grid.innerHTML = imgs.length
-    ? imgs.map(p => `<img src="${p.src}" onclick="rcOpenLightbox('${String(p.src).replace(/'/g,"\\'")}')">`).join('')
+    ? imgs.map(p => `<img src="${rcEscHtml(rcSafeUrl(p.src))}" onclick="rcOpenLightbox('${rcJsAttr(rcSafeUrl(p.src))}')">`).join('')
     : '<div class="rc-empty" style="grid-column:1/-1;padding:14px 4px;">Belum ada media dibagikan</div>';
 
   rcSyncContactInfoUI();
@@ -6490,8 +6606,8 @@ function rcSubmitReport(alasan){
   showPbToast('<i class="ic ic-hourglass"></i> Mengirim laporan...', true);
   fetch(GAS_URL, {
     method: 'POST',
-    body: JSON.stringify({ action: 'report_user', reporter: currentUser.username, reported: rcChatUser, alasan, origin: location.hostname, apiKey: API_KEY })
-  }).then(r => r.json()).then(res => {
+    body: JSON.stringify({ action: 'report_user', reported: rcChatUser, alasan, token: currentUser.token, origin: location.hostname, apiKey: API_KEY })
+  }).then(r => r.json()).then(rcHandleAuthError).then(res => {
     if (res.ok) {
       showPbToast('<i class="ic ic-checkcircle"></i> Laporan terkirim, terima kasih!', true);
     } else {
@@ -6773,7 +6889,7 @@ function rcOpenGroupInfo(){
   grid.innerHTML = hideMedia
     ? '<div class="rc-empty" style="grid-column:1/-1;padding:14px 4px;">🙈 Media disembunyikan dari galeri (Visibilitas Media / Privasi Lanjutan nonaktif)</div>'
     : imgs.length
-      ? imgs.slice(0,12).map(p => `<img src="${p.src}" onclick="rcOpenLightbox('${String(p.src).replace(/'/g,"\\'")}')">`).join('')
+      ? imgs.slice(0,12).map(p => `<img src="${rcEscHtml(rcSafeUrl(p.src))}" onclick="rcOpenLightbox('${rcJsAttr(rcSafeUrl(p.src))}')">`).join('')
       : '<div class="rc-empty" style="grid-column:1/-1;padding:14px 4px;">Belum ada media dibagikan</div>';
 
   const approxKB = hideMedia ? 0 : Math.round(imgs.length * 42);
@@ -6794,7 +6910,7 @@ function rcRenderGroupInfoMembers(){
   el.innerHTML = group.members.map(m => {
     const isMe = m.toLowerCase() === me.toLowerCase();
     const isOwner = m.toLowerCase() === (group.owner||'').toLowerCase();
-    return `<div class="rc-gi-member-row" onclick="${isMe ? '' : `rcOpenProfile('${m.replace(/'/g,"\\'")}')`}">
+    return `<div class="rc-gi-member-row" onclick="${isMe ? '' : `rcOpenProfile('${rcJsAttr(m)}')`}">
       <div class="rc-gi-member-avatar">${rcInitial(m)}</div>
       <div>
         <div class="rc-gi-member-name">${isMe ? 'Anda' : rcEscHtml(m)}${isMe ? '' : rcBadgeHtml(m)}</div>
@@ -6903,7 +7019,7 @@ function rcRenderCallLog(){
   const favLbl = document.getElementById('rcCallsFavLbl');
   if (contacts.length) {
     favLbl.style.display = '';
-    favRow.innerHTML = contacts.map(c => `<button class="rc-calls-fav" onclick="rcOpenChat('${c.replace(/'/g,"\\'")}'); setTimeout(rcStartCall,200);">
+    favRow.innerHTML = contacts.map(c => `<button class="rc-calls-fav" onclick="rcOpenChat('${rcJsAttr(c)}'); setTimeout(rcStartCall,200);">
       <div class="rc-calls-fav-avatar">${rcInitial(c)}</div>
       <div class="rc-calls-fav-name">${rcEscHtml(rcGetNickname(c) || c)}</div>
     </button>`).join('');
@@ -6919,13 +7035,13 @@ function rcRenderCallLog(){
     const missed = c.direction === 'incoming' && !c.answered;
     const arrow = c.direction === 'incoming' ? '↙' : '↗';
     const name = rcGetNickname(c.peer) || c.peer;
-    return `<div class="rc-call-row" onclick="rcOpenChat('${c.peer.replace(/'/g,"\\'")}')">
+    return `<div class="rc-call-row" onclick="rcOpenChat('${rcJsAttr(c.peer)}')">
       <div class="rc-call-avatar">${rcInitial(c.peer)}</div>
       <div class="rc-call-mid">
         <div class="rc-call-name${missed ? ' missed' : ''}">${rcEscHtml(name)}${rcBadgeHtml(c.peer)}</div>
         <div class="rc-call-sub">${arrow} ${rcFmtCallTime(c.ts)}</div>
       </div>
-      <button class="rc-call-btn" onclick="event.stopPropagation(); rcOpenChat('${c.peer.replace(/'/g,"\\'")}'); setTimeout(rcStartCall,200);" title="Telepon lagi">📞</button>
+      <button class="rc-call-btn" onclick="event.stopPropagation(); rcOpenChat('${rcJsAttr(c.peer)}'); setTimeout(rcStartCall,200);" title="Telepon lagi">📞</button>
     </div>`;
   }).join('');
 }
