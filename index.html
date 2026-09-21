@@ -1734,6 +1734,9 @@ body.rc-font-large .rc-bubble { font-size:0.98rem; }
 
   <!-- CONTACTS VIEW -->
   <div id="rcContactsView" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div id="rcMyIdBanner" style="display:none;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:0.78rem;font-weight:700;color:#128C7E;cursor:pointer;user-select:none;" onclick="rcCopyMyUserId(currentUser && currentUser.userId)">
+      <i class="ic ic-idcard"></i><span id="rcMyIdBannerText">ID kamu: ······</span>
+    </div>
     <div class="rc-search-wrap">
       <span><i class="ic ic-search"></i></span>
       <input class="rc-search" id="rcSearch" placeholder="Cari nama kontak tersimpan" oninput="rcSearchUsers()" />
@@ -3353,6 +3356,7 @@ async function doLogin() {
     }
     if (res.ok) {
       currentUser = { username: res.username, userId: res.userId || '', token: res.token || '' };
+      rcRenderMyIdBanner();
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3435,6 +3439,7 @@ async function doRegister() {
     rcResetHumanCheck();
     if (res.ok) {
       currentUser = { username: res.username, userId: res.userId || '', token: res.token || '' };
+      rcRenderMyIdBanner();
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
       enterApp();
     } else {
@@ -3480,6 +3485,7 @@ async function rcRefreshMyUserId(){
     if (me && me.userId && me.userId !== currentUser.userId) {
       currentUser.userId = me.userId;
       localStorage.setItem('rst_user', JSON.stringify(currentUser));
+      rcRenderMyIdBanner();
     }
   } catch(e) { /* diam saja, bukan fitur kritis kalau gagal sekali */ }
 }
@@ -3578,6 +3584,7 @@ document.addEventListener('visibilitychange', () => {
 });
 function rcOpenApp(){
   document.getElementById('rcOverlay').classList.add('rc-open');
+  rcRenderMyIdBanner();
   rcShowContacts();
   rcLoadUsers();
   clearInterval(rcStatusTimer);
@@ -3811,6 +3818,7 @@ async function rcLoadUsers(){
       if (me && me.userId) {
         currentUser.userId = me.userId;
         localStorage.setItem('rst_user', JSON.stringify(currentUser));
+        rcRenderMyIdBanner();
       }
     }
   } catch(e){ document.getElementById('rcUserList').innerHTML='<div class="rc-empty">⚠️ Gagal memuat pengguna</div>'; }
@@ -4003,6 +4011,7 @@ function rcShowContacts(){
   document.getElementById('rcOverlay').classList.remove('rc-panel-open');
   rcCurrentTab = 'chat';
   document.getElementById('rcContactsView').style.display = 'flex';
+  rcRenderMyIdBanner();
   document.getElementById('rcChatView').style.display     = 'none';
   const emptyHint = document.getElementById('rcChatEmptyHint');
   if (emptyHint) emptyHint.style.display = 'flex';
@@ -6826,12 +6835,23 @@ function rcSyncInfoUserId(){
   }
 }
 function rcCopyMyUserId(uid){
+  if (!uid) { showPbToast('⚠️ ID belum tersedia, coba lagi sebentar.'); return; }
   const doToast = () => showPbToast('<i class="ic ic-checkcircle"></i> ID disalin: ' + rcEscHtml(uid), true);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(uid).then(doToast).catch(doToast);
   } else {
     doToast();
   }
+}
+// Banner "ID kamu: xxxxxxxx" di halaman depan (atas daftar kontak). Diketuk untuk disalin.
+function rcRenderMyIdBanner(){
+  const wrap = document.getElementById('rcMyIdBanner');
+  const txt  = document.getElementById('rcMyIdBannerText');
+  if (!wrap || !txt) return;
+  const uid = currentUser && currentUser.userId ? currentUser.userId : '';
+  if (!uid) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  txt.textContent = 'ID kamu: ' + uid;
 }
 function rcSyncMenuContactBtn(){
   const btn = document.getElementById('rcContactToggleMenuBtn');
