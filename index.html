@@ -3267,6 +3267,22 @@ async function gasRequest(params) {
   return rcHandleAuthError(await res.json());
 }
 
+// Sama seperti gasRequest, tapi kirim via POST (body JSON) alih-alih query string GET.
+// WAJIB dipakai untuk request yang membawa cfToken (token Cloudflare Turnstile):
+// token itu bisa sangat panjang dan gampang kepotong/rusak kalau ditumpangi ke URL GET,
+// yang bikin verifikasi selalu gagal walau token-nya sendiri valid.
+async function gasPostRequest(params) {
+  params.origin = location.hostname;
+  params.apiKey = API_KEY;
+  if (currentUser && currentUser.token) params.token = currentUser.token;
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) throw new Error('Network error');
+  return rcHandleAuthError(await res.json());
+}
+
 /* ══════════════════════════════════════════════════════
    👋 WELCOME SCREEN
 ══════════════════════════════════════════════════════ */
@@ -3341,7 +3357,7 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = '⏳ Memeriksa...';
   errEl.textContent = '';
   try {
-    const res = await gasRequest({ action: 'login', username, password, cfToken: rcLoginTurnstileToken });
+    const res = await gasPostRequest({ action: 'login', username, password, cfToken: rcLoginTurnstileToken });
     rcResetLoginHumanCheck();
     const info = String(res.info || '').trim().toLowerCase();
     if (info === 'tban' || res.tban) {
@@ -3435,7 +3451,7 @@ async function doRegister() {
   btn.disabled = true; btn.textContent = '⏳ Mendaftar...';
   errEl.textContent = '';
   try {
-    const res = await gasRequest({ action: 'register', username, password, cfToken: rcTurnstileToken });
+    const res = await gasPostRequest({ action: 'register', username, password, cfToken: rcTurnstileToken });
     rcResetHumanCheck();
     if (res.ok) {
       currentUser = { username: res.username, userId: res.userId || '', token: res.token || '' };
